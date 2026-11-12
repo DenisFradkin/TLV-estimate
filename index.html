@@ -408,6 +408,19 @@ body { background: var(--bg); -webkit-text-size-adjust: 100%; }
   .report .table-wrap, .report .r-table { overflow-x: auto; }
 }
 @media print { .grid td.desc, .grid th { position: static !important; box-shadow: none !important; } }
+.pdf-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-height: 62vh; overflow: auto; padding: 4px; }
+.pdf-page { font: inherit; border: 2px solid var(--line); background: #fff; border-radius: 12px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.pdf-page:hover { border-color: #999; } .pdf-page.sug { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,192,0,.35); }
+.pdf-page img { width: 100%; border: 1px solid #ddd; border-radius: 6px; }
+.pdf-page em { font-style: normal; font-size: 12px; padding: 1px 8px; border-radius: 99px; }
+.pdf-page em.ok { background: var(--ok-bg); color: var(--ok); } .pdf-page em.warn { background: var(--warn-bg); color: var(--warn); }
+.modal-box:has(.pdf-pages) { width: min(1000px, 96vw); }
+.pdf-preview { width: 100%; border: 1px solid #ccc; border-radius: 8px; cursor: zoom-in; margin-bottom: 8px; }
+.ocr-warn { background: var(--warn-bg); border: 1px solid #f0d08a; border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+.grid tr.arith td { background: #fde2df !important; }
+.warn-tag { background: var(--red-bg); color: var(--red); }
+.map-layout { grid-template-columns: 1fr 380px; }
+input.cell.desc-in { min-width: 260px; text-align: right !important; }
 
 </style>
 </head>
@@ -426,7 +439,7 @@ body { background: var(--bg); -webkit-text-size-adjust: 100%; }
 <main id="app"></main>
 <div id="modal" class="modal hidden"><div class="modal-box"></div></div>
 <div id="toast" class="toast hidden"></div>
-<input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv" hidden>
+<input type="file" id="fileInput" accept=".xlsx,.xls,.xlsm,.csv,.pdf" hidden>
 <input type="file" id="backupInput" accept=".json" hidden>
 
 <script>
@@ -600,14 +613,14 @@ function defaultSettings() {
 
 /* מילון שיוך – הסדר חשוב: ספציפי לפני כללי */
 const KEYWORDS = [
-  ['__total', ['לפני מע"מ', 'לפני מע״מ', 'ללא מע"מ)', 'סה"כ פרויקט', 'סה״כ פרויקט', 'סהכ פרויקט', '(price)']],
+  ['__total', ['סהייכ לפני', 'לפני מעיימ', 'סהייכ פרויקט', 'סה"כ לפני מע', 'סה״כ לפני מע', 'סהכ לפני מע', 'סה"כ ללא מע', 'סה"כ פרויקט', 'סה״כ פרויקט', 'סהכ פרויקט', '(price)']],
   ['__ignore', ['סה"כ', 'סה״כ', 'סהכ', 'סה"כ', 'מע"מ', 'מע״מ', 'מעמ', 'מעיימ', 'סהייכ', 'שטח משוקלל', 'האומדן אינו כולל']],
   ['bnm', ['בנ"מ', 'בנ״מ', 'בנמ', 'בלצ"מ', 'בלצ״מ', 'בלצמ', 'בלתי נצפ', 'בלתי צפוי']],
   ['commission', ['עמלת חברה', 'חברה עירונית', 'עמלה']],
   ['control', ['מכון בקרה']],
   ['water', ['מים וביוב', 'אגרות מים', 'אגרת מים', 'ביוב']],
+  ['otherFees', ['אגרות נוספות', 'חח"י', 'חח״י', 'חחי', 'חברת חשמל', 'אגרות חשמל', 'לאגרות']],
   ['govFees', ['פיצוי נופי', 'עתיקות', 'אגרות ממשלתיות']],
-  ['otherFees', ['חח"י', 'חח״י', 'חחי', 'חברת חשמל', 'אגרות נוספות', 'אגרות חשמל', 'לאגרות']],
   ['planning', ['תכנון', 'ניהול', 'פיקוח']],
   ['demolition', ['הריס']],
   ['pilotis', ['מפולש']],
@@ -1211,7 +1224,7 @@ const Importer = (() => {
     note: ['הערות', 'הערה'],
     chapter: ['נושא', 'פרק'],
   };
-  const hasAny = (s, arr) => arr.some(w => normDesc(s).includes(normDesc(w)));
+  const hasAny = (s, arr) => { const n = normDesc(s).replace(/\s/g, ''); return arr.some(w => n.includes(normDesc(w).replace(/\s/g, ''))); };
 
   function detectHeader(rows) {
     for (let r = 0; r < Math.min(rows.length, 40); r++) {
@@ -1223,7 +1236,7 @@ const Importer = (() => {
         if (cols.desc == null && hasAny(s, H.desc)) cols.desc = i;
         else if (cols.qty == null && hasAny(s, H.qty)) cols.qty = i;
         else if (cols.price == null && hasAny(s, H.price)) cols.price = i;
-        else if (cols.pct == null && hasAny(s, H.pct) && !hasAny(s, ['פילוח'])) cols.pct = i;
+        else if (cols.pct == null && hasAny(s, H.pct) && !hasAny(s, ['פילוח', 'טווח'])) cols.pct = i;
         else if (cols.note == null && hasAny(s, H.note)) cols.note = i;
         else if (cols.chapter == null && hasAny(s, H.chapter)) cols.chapter = i;
         else if (hasAny(s, H.total) && !s.includes('כולל מע"מ')) { if (cols.total == null) cols.total = i; }
@@ -1250,8 +1263,10 @@ const Importer = (() => {
         note = c.note != null ? row[c.note] : null; ch = c.chapter != null ? row[c.chapter] : null;
       } else {
         // היוריסטיקה: הטקסט הארוך ביותר = תיאור, המספר האחרון = סה"כ
-        const texts = row.map((c, i) => [c, i]).filter(([c]) => typeof c === 'string' && parseNum(c) == null && c.trim().length > 1);
-        const nums = row.map(c => parseNum(c)).filter(n => n != null);
+        const texts = row.map((c, i) => [c, i]).filter(([c]) => typeof c === 'string' && /[\u05D0-\u05EAA-Za-z]{2,}/.test(c));
+        const nums = row.filter(c => !(typeof c === 'string' && /[\u05D0-\u05EAA-Za-z]{2,}/.test(c))).map(c => parseNum(c)).filter(n => n != null);
+        const pctCell = row.find(c => typeof c === 'string' && /^\s*\d+(\.\d+)?\s*%\s*$/.test(c));
+        if (pctCell) pct = parsePct(pctCell);
         if (!texts.length) continue;
         texts.sort((a, b) => String(b[0]).length - String(a[0]).length);
         desc = texts[0][0];
@@ -1327,7 +1342,8 @@ const Importer = (() => {
 
   function snapshot(v) { return JSON.parse(JSON.stringify({ areas: v.areas, items: v.items, l1: v.l1, declaredTotal: v.declaredTotal })); }
 
-  return { isTemplate, readTemplate, readGeneric, readPaste, guessRows, rowsToVersion, parseNum, parsePct, snapshot };
+  const readGrid = grid => rowsFromGrid(grid);
+  return { isTemplate, readTemplate, readGeneric, readPaste, readGrid, guessRows, rowsToVersion, parseNum, parsePct, snapshot };
 })();
 
 </script>
@@ -1447,6 +1463,222 @@ const Exporter = (() => {
 
 </script>
 <script>
+/* ייבוא PDF – שכבת טקסט (pdf.js) או זיהוי טקסט מתמונה (Tesseract OCR). הספריות נטענות לפי דרישה מ-CDN */
+'use strict';
+
+const PdfImport = (() => {
+  const LIB = Object.assign({
+    pdfjs: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js',
+    pdfWorker: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js',
+    tesseract: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+    tessWorker: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js',
+    tessCore: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+    langPath: 'https://tessdata.projectnaptha.com/4.0.0',
+  }, window.PDF_LIB_OVERRIDE || {});
+
+  const loaded = {};
+  function loadScript(src) {
+    if (loaded[src]) return loaded[src];
+    return loaded[src] = new Promise((res, rej) => {
+      const s = document.createElement('script'); s.src = src; s.onload = res;
+      s.onerror = () => { delete loaded[src]; rej(new Error('לא ניתן לטעון ספרייה (נדרש חיבור לאינטרנט): ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  async function pdfjs() {
+    await loadScript(LIB.pdfjs);
+    const lib = window.pdfjsLib;
+    if (!lib.GlobalWorkerOptions.workerSrc) {
+      // worker מאותו מקור – דרך blob כדי לעבוד גם מ-GitHub Pages וגם מקובץ מקומי
+      try {
+        const code = await fetch(LIB.pdfWorker).then(r => r.text());
+        lib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      } catch (e) { lib.GlobalWorkerOptions.workerSrc = LIB.pdfWorker; }
+    }
+    return lib;
+  }
+
+  async function open(file) {
+    const lib = await pdfjs();
+    const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const pages = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      const text = tc.items.map(t => t.str).join(' ');
+      const nums = (text.match(/\d[\d,]{2,}/g) || []).length;
+      const vp = page.getViewport({ scale: 0.32 });
+      const c = document.createElement('canvas'); c.width = vp.width; c.height = vp.height;
+      await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+      const score = nums + (/אומדן|סה"כ|סה״כ|price|cost/i.test(text) ? 15 : 0) + (/כמות|מחיר/.test(text) ? 10 : 0);
+      pages.push({ n: i, hasText: tc.items.filter(t => t.str.trim()).length > 25 && nums > 3, nums, thumb: c.toDataURL('image/jpeg', 0.7), score });
+    }
+    const best = pages.slice().sort((a, b) => b.score - a.score)[0];
+    return { doc, pages, suggested: best ? best.n : 1 };
+  }
+
+  async function renderPage(doc, n, width) {
+    const page = await doc.getPage(n);
+    const v1 = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: width / v1.width });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+    return c;
+  }
+
+  /* ניקוי טקסט עברי מ-PDF: סוגריים הפוכים, גרשיים מרווחים, קידוד ð=נ */
+  function fixHeb(t) {
+    t = String(t).replace(/ð/g, 'נ').replace(/\s+/g, ' ').trim();
+    if (/[\u0590-\u05FF]/.test(t)) {
+      t = t.replace(/[()\[\]]/g, ch => ({ '(': ')', ')': '(', '[': ']', ']': '[' }[ch]));
+      t = t.replace(/([\u05D0-\u05EA]) ?(["״]) ?([\u05D0-\u05EA])/g, '$1"$3').replace(/([\u05D0-\u05EA]) (['׳])/g, "$1'");
+      t = t.replace(/\( /g, '(').replace(/ \)/g, ')').replace(/ ,/g, ',');
+    }
+    return t;
+  }
+
+  /* ---- פריטי טקסט -> שורות -> עמודות ---- */
+  const isNum = s => /^[\s₪%()\-–.,\d]+$/.test(s) && /\d/.test(s);
+
+  function toRows(items) {
+    items = items.filter(i => i.text && i.text.trim()).sort((a, b) => a.y - b.y);
+    const rows = [];
+    items.forEach(it => {
+      const r = rows.find(r => Math.abs(r.y - it.y) < Math.max(2.5, Math.min(r.h, it.h) * 0.55));
+      if (r) { r.items.push(it); r.y = (r.y * (r.items.length - 1) + it.y) / r.items.length; }
+      else rows.push({ y: it.y, h: it.h, items: [it] });
+    });
+    rows.sort((a, b) => a.y - b.y);
+    // איחוד מילים צמודות לתא אחד (מימין לשמאל)
+    rows.forEach(r => {
+      r.items.sort((a, b) => b.x1 - a.x1);
+      const cells = [];
+      r.items.forEach(it => {
+        const last = cells[cells.length - 1];
+        const gap = last ? last.x0 - it.x1 : 99;
+        const tol = Math.max(2.5, (it.h || 8) * 0.55);
+        if (last && gap < tol && !(isNum(last.text) && isNum(it.text) && gap > tol * 0.5)) { last.text = last.text + (gap < (it.h || 8) * 0.12 ? '' : ' ') + it.text; last.x0 = Math.min(last.x0, it.x0); }
+        else cells.push({ ...it });
+      });
+      r.cells = cells.map(c => ({ ...c, text: fixHeb(c.text) }));
+    });
+    return rows;
+  }
+
+  function toGrid(rows) {
+    // עמודות לפי שורות שיש בהן לפחות 2 מספרים + שורת הכותרות
+    const dataRows = rows.filter(r => r.cells.filter(c => isNum(c.text)).length >= 2);
+    const spans = [];
+    dataRows.forEach(r => r.cells.forEach(c => spans.push([c.x0, c.x1])));
+    spans.sort((a, b) => a[0] - b[0]);
+    const cols = [];
+    spans.forEach(([a, b]) => {
+      const last = cols[cols.length - 1];
+      if (last && a <= last[1] + 1) last[1] = Math.max(last[1], b); else cols.push([a, b]);
+    });
+    cols.reverse(); // מימין לשמאל
+    const colOf = c => {
+      let best = -1, bestOv = -Infinity;
+      cols.forEach(([a, b], i) => {
+        const ov = Math.min(b, c.x1) - Math.max(a, c.x0);
+        const dist = ov > 0 ? ov : -Math.min(Math.abs(c.x0 - b), Math.abs(a - c.x1));
+        if (dist > bestOv) { bestOv = dist; best = i; }
+      });
+      return best;
+    };
+    const grid = rows.map(r => {
+      const arr = new Array(cols.length).fill(null);
+      r.cells.forEach(c => { const i = colOf(c); arr[i] = arr[i] == null ? c.text : arr[i] + ' ' + c.text; });
+      return arr;
+    });
+    // כותרת מרובת שורות: איחוד טקסטים מעל ומתחת לשורת "פירוט" עד שורת הנתונים הראשונה
+    const descW = ['פירוט', 'תיאור', 'תאור', 'סעיף'];
+    const h = grid.findIndex(row => row.some(c => c && descW.some(w => String(c).replace(/\s/g, '').includes(w))));
+    if (h >= 0) {
+      let firstData = grid.findIndex((row, i) => i > h && row.filter(c => c && isNum(c)).length >= 2);
+      if (firstData < 0) firstData = grid.length;
+      const from = Math.max(0, h - 2);
+      const header = cols.map((_, ci) => grid.slice(from, firstData).map(row => row[ci]).filter(c => c && !isNum(c)).join(' '));
+      return [header, ...grid.slice(firstData)];
+    }
+    return grid;
+  }
+
+  async function extractText(doc, n) {
+    const page = await doc.getPage(n);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const items = tc.items.filter(i => i.str && i.str.trim()).map(i => {
+      const x = i.transform[4], h = Math.abs(i.transform[3]) || i.height || 8;
+      return { text: i.str, x0: x, x1: x + i.width, y: vp.height - i.transform[5] - h / 2, h };
+    });
+    return toGrid(toRows(items));
+  }
+
+  /* התמונה הגדולה ביותר שמוטמעת בעמוד (אם היא מכסה חלק משמעותי מהעמוד) */
+  async function embeddedImage(doc, n) {
+    try {
+      const lib = window.pdfjsLib, page = await doc.getPage(n);
+      const ops = await page.getOperatorList();
+      const names = [];
+      ops.fnArray.forEach((fn, i) => { if (fn === lib.OPS.paintImageXObject) names.push(ops.argsArray[i][0]); });
+      let best = null;
+      for (const name of names) {
+        const store = name.startsWith('g_') ? page.commonObjs : page.objs;
+        const im = await new Promise(res => { try { store.get(name, res); } catch (e) { res(null); } });
+        if (!im) continue;
+        const w = im.width, h = im.height;
+        if (!best || w * h > best.w * best.h) best = { im, w, h };
+      }
+      if (!best || best.w < 500 || best.h < 200) return null;
+      const c = document.createElement('canvas'); c.width = best.w; c.height = best.h;
+      const ctx = c.getContext('2d'), im = best.im;
+      if (im.bitmap) { ctx.drawImage(im.bitmap, 0, 0); return c; }
+      if (!im.data) return null;
+      const out = ctx.createImageData(best.w, best.h), o = out.data, src = im.data, px = best.w * best.h;
+      if (src.length === px * 4) o.set(src);
+      else if (src.length === px * 3) for (let i = 0, j = 0; i < px; i++) { o[j++] = src[i * 3]; o[j++] = src[i * 3 + 1]; o[j++] = src[i * 3 + 2]; o[j++] = 255; }
+      else if (src.length === px) for (let i = 0, j = 0; i < px; i++) { o[j++] = o[j++] = o[j++] = src[i]; o[j++] = 255; }
+      else return null;
+      ctx.putImageData(out, 0, 0); return c;
+    } catch (e) { console.warn('embeddedImage', e); return null; }
+  }
+
+  /* ---- OCR ---- */
+  let tworker = null, lastSrc = null;
+  async function ocr(doc, n, onProgress) {
+    await loadScript(LIB.tesseract);
+    // עדיפות: התמונה המקורית שמוטמעת ב-PDF ברזולוציה המלאה (צילום מסך של הטבלה); אחרת – רינדור העמוד
+    let src = await embeddedImage(doc, n);
+    if (!src) src = await renderPage(doc, n, 2400);
+    lastSrc = src;
+    const scale = src.width < 1800 ? 2 : 1;
+    const canvas = document.createElement('canvas'); canvas.width = src.width * scale; canvas.height = src.height * scale;
+    const ctx = canvas.getContext('2d'); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+    // גווני אפור (בלי סף – שומר על טקסט צבעוני ועל תאים צבועים)
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height), d = img.data;
+    for (let i = 0; i < d.length; i += 4) { const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; d[i] = d[i + 1] = d[i + 2] = l; }
+    ctx.putImageData(img, 0, 0);
+    if (!tworker) {
+      tworker = await Tesseract.createWorker(['heb', 'eng'], 1, {
+        workerPath: LIB.tessWorker, corePath: LIB.tessCore, langPath: LIB.langPath,
+        logger: m => onProgress && m.status && onProgress(m.status, m.progress),
+      });
+      await tworker.setParameters({ tessedit_pageseg_mode: '11', preserve_interword_spaces: '1' });
+    }
+    const { data } = await tworker.recognize(canvas);
+    const items = (data.words || []).filter(w => w.text && w.text.trim() && w.confidence > 20).map(w => ({
+      text: w.text.replace(/[|]/g, ''), x0: w.bbox.x0, x1: w.bbox.x1, y: (w.bbox.y0 + w.bbox.y1) / 2, h: w.bbox.y1 - w.bbox.y0,
+    }));
+    return toGrid(toRows(items));
+  }
+
+  const lastImage = () => lastSrc ? lastSrc.toDataURL('image/jpeg', 0.85) : null;
+  return { open, renderPage, extractText, ocr, toRows, toGrid, lastImage };
+})();
+
+</script>
+<script>
 /* ממשק המשתמש */
 'use strict';
 
@@ -1454,7 +1686,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STATUSES = ['טיוטה', 'בבדיקה', 'הוחזר לתיקון', 'אושר', 'אושר בהסתייגות'];
-const SOURCE_LABEL = { template: 'תבנית', excel: 'אקסל מנהל פרויקט', paste: 'הדבקה', manual: 'הקלדה ידנית', copy: 'עותק בודק' };
+const SOURCE_LABEL = { template: 'תבנית', excel: 'אקסל מנהל פרויקט', pdf: 'PDF', paste: 'הדבקה', manual: 'הקלדה ידנית', copy: 'עותק בודק' };
 const ST_LABEL = { ok: 'תקין', warn: 'חריגה קלה', red: 'חריגה', none: '', same: 'כמו האומדן' };
 
 const state = { pending: null, tab: 'l2', compareA: null, compareB: null };
@@ -1635,7 +1867,7 @@ function renderProject(p, vid) {
 
 function addButtons(compact) {
   return `<div class="addbtns ${compact ? 'compact' : ''}">
-    <button class="btn primary" data-add="file">⬆ ייבוא קובץ אקסל</button>
+    <button class="btn primary" data-add="file">⬆ ייבוא אקסל / PDF</button>
     <button class="btn" data-add="paste">⎘ הדבקת טבלה</button>
     <button class="btn" data-add="manual2">✎ הקלדה ידנית – רמה 2</button>
     <button class="btn" data-add="manual1">✎ הקלדה ידנית – רמה 1</button>
@@ -1664,6 +1896,7 @@ function editProjectDialog(p) {
 
 /* ---------- ייבוא ---------- */
 async function importFile(p, file) {
+  if (/\.pdf$/i.test(file.name)) return pdfDialog(p, file);
   try {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array', cellFormula: false });
@@ -1679,6 +1912,38 @@ async function importFile(p, file) {
     location.hash = `#/p/${p.id}/map`;
   } catch (err) { console.error(err); toast('לא ניתן לקרוא את הקובץ: ' + err.message); }
 }
+/* ---------- ייבוא PDF ---------- */
+async function pdfDialog(p, file) {
+  openModal(`<h2>ייבוא PDF</h2><p class="muted">טוען את הקובץ ${esc(file.name)}…</p>`);
+  let info;
+  try { info = await PdfImport.open(file); }
+  catch (e) { console.error(e); openModal(`<h2>ייבוא PDF</h2><p class="red-t">${esc(e.message)}</p><div class="modal-actions"><button class="btn" data-close>סגור</button></div>`); return; }
+  openModal(`<h2>באיזה עמוד נמצא האומדן?</h2>
+    <p class="muted">${esc(file.name)} · ${info.pages.length} עמודים · העמוד המסומן הוא ההצעה של המערכת</p>
+    <div class="pdf-pages">${info.pages.map(pg => `<button class="pdf-page ${pg.n === info.suggested ? 'sug' : ''}" data-n="${pg.n}">
+      <img src="${pg.thumb}" alt=""><span>עמוד ${pg.n}</span><em class="${pg.hasText ? 'ok' : 'warn'}">${pg.hasText ? 'טקסט – קריאה מדויקת' : 'תמונה – זיהוי טקסט (OCR)'}</em></button>`).join('')}</div>
+    <div class="modal-actions"><button class="btn" data-close>ביטול</button></div>`, box => {
+    $$('.pdf-page', box).forEach(b => b.onclick = () => pdfReadPage(p, file, info, +b.dataset.n));
+    const s = $('.pdf-page.sug', box); if (s) s.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+async function pdfReadPage(p, file, info, n) {
+  const pg = info.pages.find(x => x.n === n);
+  const prog = (status, v) => { const el = $('#pdfProg'); if (el) el.textContent = `${{ 'recognizing text': 'מזהה טקסט', 'loading language traineddata': 'טוען מילון עברית', 'initializing api': 'מאתחל', 'loading tesseract core': 'טוען מנוע זיהוי' }[status] || status} ${v != null ? Math.round(v * 100) + '%' : ''}`; };
+  openModal(`<h2>קורא את עמוד ${n}…</h2><p class="muted">${pg.hasText ? 'קריאת שכבת הטקסט של ה-PDF' : 'זיהוי טקסט מתמונה – עשוי להימשך 20–60 שניות'}</p><p id="pdfProg" class="muted"></p>`);
+  try {
+    let grid = pg.hasText ? await PdfImport.extractText(info.doc, n) : null;
+    let ocr = false;
+    let r = grid ? Importer.readGrid(grid) : { rows: [] };
+    if (r.rows.length < 3) { grid = await PdfImport.ocr(info.doc, n, prog); r = Importer.readGrid(grid); ocr = true; }
+    const img = (ocr && PdfImport.lastImage()) || (await PdfImport.renderPage(info.doc, n, 1600)).toDataURL('image/jpeg', 0.8);
+    if (!r.rows.length) { openModal(`<h2>לא נמצאה טבלה בעמוד ${n}</h2><p>נסה עמוד אחר, או העתק את הטבלה והשתמש ב"הדבקת טבלה".</p><div class="modal-actions"><button class="btn" data-close>סגור</button></div>`); return; }
+    state.pending = { projectId: p.id, rows: Importer.guessRows(r.rows, Store.get().settings.learned), header: r.header, file: `${file.name} – עמוד ${n}`, source: 'pdf', image: img, ocr };
+    closeModal(); location.hash = `#/p/${p.id}/map`;
+  } catch (e) { console.error(e); openModal(`<h2>שגיאה בקריאת העמוד</h2><p class="red-t">${esc(e.message)}</p><div class="modal-actions"><button class="btn" data-close>סגור</button></div>`); }
+}
+
 function loadPendingSheet() {
   const pd = state.pending;
   const r = Importer.readGeneric(pd.wb, pd.sheet);
@@ -1724,22 +1989,25 @@ function renderMapping(p) {
         <p class="muted">${esc(pd.file)} · ${pd.rows.length} שורות · ${pd.header ? 'זוהתה שורת כותרות' : 'לא זוהתה שורת כותרות – זיהוי לפי מבנה השורה'} ${unm ? `· <b class="red-t">${unm} שורות לא משויכות</b>` : '· כל השורות משויכות'}</p></div>
         <div class="actions">
           ${sheets.length > 1 ? `<label class="inline">גיליון <select id="sheetSel">${sheets.map(s => `<option ${s === pd.sheet ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>` : ''}
+          <button class="btn" id="mapAdd">+ הוסף שורה</button>
           <button class="btn primary" id="mapGo">צור גרסה מהשיוך</button>
           <a class="btn" href="#/p/${p.id}">ביטול</a>
         </div>
       </div>
+      ${pd.ocr ? `<div class="ocr-warn">⚠ <b>הטבלה זוהתה מתמונה (OCR)</b> – זיהוי כזה עלול לטעות בספרות. השווה כל שורה לתמונה שמשמאל ותקן מספרים לפני יצירת הגרסה. שורות שבהן כמות × מחיר ≠ סה"כ מסומנות באדום.</div>` : ''}
       <div class="map-layout">
         <div class="card flush"><table class="grid map">
           <thead><tr><th>שורה</th><th>פרק</th><th>פירוט (כפי שהגיש מנהל הפרויקט)</th><th class="num">אחוז</th><th class="num">כמות</th><th class="num">מחיר ליח'</th><th class="num">סה"כ</th><th>שיוך לסעיף בתבנית</th></tr></thead>
-          <tbody>${pd.rows.map(r => `<tr class="${r.key === '__unmapped' ? 'unmapped' : r.key === '__ignore' ? 'ignored' : ''}" data-id="${r.id}">
-            <td class="muted small">${r.src}</td><td class="small">${esc(r.chapter)}</td><td>${esc(r.desc)}</td>
+          <tbody>${pd.rows.map(r => { const bad = r.qty != null && r.price != null && r.total != null && Math.abs(r.qty * r.price - r.total) > 1; return `<tr class="${r.key === '__unmapped' ? 'unmapped' : r.key === '__ignore' ? 'ignored' : ''} ${bad ? 'arith' : ''}" data-id="${r.id}" ${bad ? `title="כמות × מחיר = ${fmtNum(r.qty * r.price)} – לא תואם לסה&quot;כ. בדוק מול התמונה"` : ''}>
+            <td class="muted small">${r.src}</td><td class="small">${esc(r.chapter)}</td><td><input class="cell desc-in" data-f="desc" value="${esc(r.desc)}"></td>
             <td class="num"><input class="cell" data-f="pct" value="${r.pct != null ? +(r.pct * 100).toFixed(4) + '%' : ''}"></td>
             <td class="num"><input class="cell" data-f="qty" value="${r.qty ?? ''}"></td>
             <td class="num"><input class="cell" data-f="price" value="${r.price ?? ''}"></td>
             <td class="num"><input class="cell" data-f="total" value="${r.total != null ? fmtNum(r.total) : ''}"></td>
-            <td><select data-f="key">${keyOptions(r.key)}</select>${r.key !== r.auto ? '<span class="tag">ידני</span>' : ''}</td></tr>`).join('')}</tbody>
+            <td><select data-f="key">${keyOptions(r.key)}</select>${r.key !== r.auto ? '<span class="tag">ידני</span>' : ''}${bad ? '<span class="tag warn-tag">⚠ חשבון</span>' : ''}</td></tr>`; }).join('')}</tbody>
         </table></div>
         <aside class="card side">
+          ${pd.image ? `<h3>העמוד מה-PDF</h3><img class="pdf-preview" id="pdfPrev" src="${pd.image}" title="לחץ להגדלה">` : ''}
           <h3>תוצאת השיוך</h3>
           <table class="mini"><tbody>${agg}</tbody></table>
           <div class="sumline"><span>סה"כ מחושב</span><b>${fmtNum(c.pm.price)}</b></div>
@@ -1751,22 +2019,25 @@ function renderMapping(p) {
       </div>
     </section>`;
   const S = Store.get().settings;
+  if ($('#pdfPrev')) $('#pdfPrev').onclick = () => openModal(`<img src="${pd.image}" style="width:100%"><div class="modal-actions"><button class="btn" data-close>סגור</button></div>`, box => box.style.width = 'min(1400px, 96vw)');
   if ($('#sheetSel')) $('#sheetSel').onchange = e => { pd.sheet = e.target.value; loadPendingSheet(); renderMapping(p); };
   $$('tr[data-id]').forEach(tr => {
     const r = pd.rows.find(x => x.id === tr.dataset.id);
     $$('input,select', tr).forEach(el => el.onchange = () => {
       const f = el.dataset.f;
       if (f === 'key') r.key = el.value;
+      else if (f === 'desc') { r.desc = el.value; if (r.key === '__unmapped' || r.key === r.auto) { r.key = r.auto = guessKey(r.desc, S.learned); } }
       else if (f === 'pct') r.pct = Importer.parsePct(el.value);
       else r[f] = Importer.parseNum(el.value);
       renderMapping(p);
     });
   });
+  $('#mapAdd').onclick = () => { pd.rows.push({ id: uid(), desc: '', qty: null, price: null, pct: null, total: null, note: '', chapter: '', src: '+', key: '__unmapped', auto: '__unmapped' }); renderMapping(p); const ins = $$('input.desc-in'); ins[ins.length - 1].focus(); };
   $('#mapGo').onclick = () => {
     const un = pd.rows.filter(r => r.key === '__unmapped').length;
     if (un && !confirm(`${un} שורות לא משויכות ולא ייכללו בחישוב. להמשיך?`)) return;
     pd.rows.forEach(r => { if (r.key !== r.auto && !r.key.startsWith('__unmapped')) S.learned[normDesc(r.desc)] = r.key; });
-    const nv = Importer.rowsToVersion(pd.rows, `${pd.source === 'paste' ? 'הדבקה' : 'אקסל'} – ${pd.file}`, pd.source, { type: pd.source, file: pd.file, sheet: pd.sheet });
+    const nv = Importer.rowsToVersion(pd.rows, `${{ paste: 'הדבקה', pdf: pd.ocr ? 'PDF (OCR)' : 'PDF' }[pd.source] || 'אקסל'} – ${pd.file}`, pd.source, { type: pd.source, file: pd.file, sheet: pd.sheet });
     p.versions.push(nv); state.pending = null; Store.save(p.id); Store.save('settings'); state.tab = 'l2';
     location.hash = `#/p/${p.id}/v/${nv.id}`; toast('הגרסה נוצרה');
   };
