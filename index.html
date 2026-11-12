@@ -3,7 +3,9 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f1f1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>בקרת אומדנים – ב.ד. אטלס</title>
 <style>
 :root {
@@ -288,6 +290,125 @@ table.mini { font-size: 15px; }
 .sync { margin-inline-start: 22px; font-size: 14px; padding: 3px 10px; border-radius: 99px; background: #404040; color: #ddd; white-space: nowrap; }
 .sync.ok { background: #1e6b45; color: #fff; } .sync.warn { background: #8a6d00; color: #fff; } .sync.red { background: #a32a22; color: #fff; }
 
+/* ===================== עיצוב משופר ===================== */
+:root { --bg: #f5f3ee; --line: #e4dfd3; --ink: #1c1c1c; --muted: #6b665c; --radius: 14px; --shadow: 0 1px 2px rgba(40,30,0,.06), 0 6px 18px rgba(40,30,0,.06); }
+body { background: var(--bg); -webkit-text-size-adjust: 100%; }
+.topbar { background: linear-gradient(180deg, #262626, #1a1a1a); padding: 0 28px; padding-top: env(safe-area-inset-top); }
+.brand .logo { width: 38px; height: 38px; display: grid; place-items: center; background: var(--gold); color: #1a1a1a; border-radius: 10px; font-size: 20px; }
+.topbar nav { display: flex; align-items: center; }
+.topbar nav a { display: inline-flex; gap: 6px; align-items: center; }
+.topbar nav a i { font-style: normal; font-size: 16px; opacity: .8; }
+.card, .kpi, .chip { border-radius: var(--radius); box-shadow: var(--shadow); border-color: var(--line); }
+.card.flush { border-radius: var(--radius); }
+.page-head h1 { letter-spacing: -.3px; }
+.kpi { border-top: 5px solid var(--gold); padding: 16px 18px; }
+.kpi b { letter-spacing: -.3px; }
+.btn { border-radius: 10px; padding: 8px 16px; transition: background .15s, border-color .15s, transform .05s; }
+.btn:active { transform: translateY(1px); }
+.btn.primary { box-shadow: 0 2px 0 #bf9000; }
+.tabs { gap: 6px; border-bottom: 0; margin-bottom: 10px; }
+.tabs button { border: 1px solid var(--line); border-radius: 99px; background: #fff; color: #444; padding: 8px 18px; }
+.tabs button.on { background: #1f1f1f; color: var(--gold); border-color: #1f1f1f; }
+#tabBody { border-radius: var(--radius); }
+.areas { border-radius: var(--radius) var(--radius) 0 0; }
+.grid thead th { position: sticky; top: 0; }
+.grid tbody tr:hover td { background-color: #fffbea; }
+.grid tr.chapter:hover td, .grid tr.subtotal:hover td { background-color: inherit; }
+.chip { padding: 10px 14px; }
+.vhead { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); }
+.empty { padding: 48px 24px; }
+.empty h2 { font-size: 24px; }
+.modal-box { border-radius: 18px; }
+.toast { border-radius: 12px; background: #1f1f1f; border-inline-start: 5px solid var(--gold); }
+.home-table tbody tr td.c-name b { font-size: 18px; }
+
+/* ===================== אייפד (עד 1180px) ===================== */
+@media (max-width: 1180px) {
+  .page { padding: 16px 18px 50px; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .areas { grid-template-columns: repeat(3, 1fr); }
+  .map-layout, .two-col, .settings-grid { grid-template-columns: 1fr; }
+  .side { position: static; }
+  .versions { flex-direction: column; align-items: stretch; }
+  .vlist { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .chip { flex: 0 0 auto; }
+  .addbtns.compact { justify-content: flex-start; }
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+  /* עמודת הפירוט נשארת קבועה בגלילה אופקית */
+  .grid.l2 td:first-child, .grid.l2 thead tr:not(.grp) th:first-child { position: sticky; right: 0; z-index: 2; background: #fff; width: 34px; min-width: 34px; max-width: 34px; padding: 4px 2px; }
+  .grid.l2 td.desc, .grid.l2 thead tr:not(.grp) th:nth-child(2) { position: sticky; right: 34px; z-index: 2; background: #fff; border-left: 2px solid #8c8c8c; }
+  .grid.l2 thead tr:not(.grp) th:first-child, .grid.l2 thead tr:not(.grp) th:nth-child(2) { background: var(--gold-2); z-index: 3; }
+  .grid.l2 tr.subtotal td:first-child, .grid.l2 tr.subtotal td:nth-child(2) { position: sticky; background: #F2F2F2; z-index: 2; }
+  .grid.l2 tr.subtotal td:nth-child(2) { right: 34px; border-left: 2px solid #8c8c8c; }
+  .grid.l2 tr.major td:first-child, .grid.l2 tr.major td:nth-child(2) { background: var(--gray-t); }
+  .grid.l2 tr.grand td:first-child, .grid.l2 tr.grand td:nth-child(2) { background: var(--hl); }
+  .grid.l2 tr.chapter td { position: static; }
+  .grid.l2 tr.chapter td:first-child { position: static; text-align: right !important; background: var(--gold-3); width: auto; max-width: none; padding: 6px 12px; }
+  .grid.l2 .chl { position: sticky; right: 12px; display: inline-block; }
+  .grid.l2 tr.st-red td.desc, .grid.l2 tr.st-warn td.desc { background: #fff; }
+  input.cell, .btn, select { min-height: 38px; }
+}
+
+/* ===================== נייד (עד 720px) ===================== */
+@media (max-width: 720px) {
+  html, body { font-size: 16px; }
+  h1 { font-size: 24px; }
+  .topbar { height: auto; min-height: 56px; padding: 0 12px; padding-top: env(safe-area-inset-top); gap: 8px; }
+  .brand small { display: none; } .brand b { font-size: 17px; }
+  .brand .logo { width: 32px; height: 32px; font-size: 17px; }
+  .topbar nav a { margin-inline-start: 10px; padding: 16px 2px; }
+  .topbar nav a span { display: none; }
+  .topbar nav a i { font-size: 22px; opacity: 1; }
+  .sync { font-size: 12px; margin-inline-start: 10px; padding: 3px 8px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+  .page { padding: 12px 12px 40px; }
+  .page-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .page-head .actions { justify-content: stretch; }
+  .page-head .actions .btn { flex: 1; justify-content: center; }
+  .crumbs { font-size: 13px; }
+  .vhead { flex-direction: column; align-items: stretch; }
+  .vhead .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vhead .actions > * { width: 100%; justify-content: center; }
+  .inline-edit.big { min-width: 0; width: 100%; font-size: 19px; }
+  .addbtns, .addbtns.compact { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .addbtns .btn { justify-content: center; white-space: normal; text-align: center; }
+  .kpis { grid-template-columns: 1fr; gap: 10px; }
+  .kpi b { font-size: 26px; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs button { flex: 0 0 auto; padding: 8px 14px; font-size: 15px; }
+  .areas { grid-template-columns: 1fr 1fr; padding: 12px; gap: 8px; }
+  .l1-inputs .areas { grid-template-columns: 1fr; }
+  .hero { grid-template-columns: 1fr; } .hero b { font-size: 26px; }
+  table.grid { font-size: 14px; }
+  .grid td { padding: 4px 6px; }
+  .grid.l2 td.desc { min-width: 150px; max-width: 170px; white-space: normal; font-size: 13px; }
+  input.cell { min-width: 64px; font-size: 14px; }
+  input.cell.note { min-width: 140px; }
+  .legend { font-size: 12px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .modal { align-items: flex-end; }
+  .modal-box { width: 100vw; max-height: 92vh; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .modal-actions .btn { flex: 1; justify-content: center; }
+  .chip { min-width: 150px; }
+  .two-col { gap: 16px; }
+  /* רשימת פרויקטים ככרטיסים */
+  .home-table, .home-table tbody, .home-table tr, .home-table td { display: block; width: 100%; border: 0; }
+  .home-table thead { display: none; }
+  .home-table { border: 0; }
+  .home-table tr { background: #fff; margin: 10px; width: auto; border-radius: 12px; border: 1px solid var(--line); border-top: 4px solid var(--gold); padding: 8px 12px; box-shadow: var(--shadow); }
+  .home-table td { display: flex; justify-content: space-between; align-items: center; padding: 5px 0 !important; text-align: left !important; border-bottom: 1px dashed #eee; }
+  .home-table td:last-child { border-bottom: 0; }
+  .home-table td[data-label]::before { content: attr(data-label); color: var(--muted); font-size: 14px; }
+  .home-table td.c-name { display: block; text-align: right !important; border-bottom: 1px solid var(--line); padding-bottom: 8px !important; }
+  .card.flush:has(.home-table) { background: transparent; box-shadow: none; border: 0; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .print-bar { flex-wrap: wrap; padding: 0 12px; }
+  .report { padding: 16px; }
+  .r-head { flex-direction: column; gap: 8px; } .r-meta { align-items: flex-start; text-align: right; }
+  .r-kpis { grid-template-columns: 1fr 1fr; }
+  .report .table-wrap, .report .r-table { overflow-x: auto; }
+}
+@media print { .grid td.desc, .grid th { position: static !important; box-shadow: none !important; } }
+
 </style>
 </head>
 <body>
@@ -297,8 +418,8 @@ table.mini { font-size: 15px; }
     <span><b>בקרת אומדנים</b><small>ב.ד. אטלס הנדסה וניהול פרויקטים</small></span>
   </a>
   <nav>
-    <a href="#/" data-nav="home">פרויקטים</a>
-    <a href="#/settings" data-nav="settings">מחירון והגדרות</a>
+    <a href="#/" data-nav="home"><i>▦</i><span>פרויקטים</span></a>
+    <a href="#/settings" data-nav="settings"><i>⚙</i><span>מחירון והגדרות</span></a>
     <span id="syncState" class="sync"></span>
   </nav>
 </header>
@@ -1382,16 +1503,16 @@ function renderHome() {
     const reds = c ? c.checks.filter(x => x.level === 'red').length : 0;
     const dev = c && c.bench.price ? (c.pm.price - c.bench.price) / c.bench.price : null;
     return `<tr data-id="${p.id}" class="clickable">
-      <td><b>${esc(p.name)}</b><div class="muted small">${esc(p.address || '')}</div></td>
-      <td>${esc(typeName(p.buildingTypeId))}</td>
-      <td>${esc(p.pm || '')}</td>
-      <td>${v ? esc(v.label) + `<div class="muted small">${p.versions.length} גרסאות · ${new Date(v.createdAt).toLocaleDateString('he-IL')}</div>` : '<span class="muted">אין גרסה</span>'}</td>
-      <td class="num">${c ? fmtNum(c.pm.price) : ''}</td>
-      <td class="num">${c ? fmtNum(c.bench.price) : ''}</td>
-      <td class="num">${dev != null ? `<span class="pill ${dev > db.settings.yellowPct ? 'red' : dev > 0 ? 'warn' : 'ok'}">${dev > 0 ? '+' : ''}${fmtPct(dev)}</span>` : ''}</td>
-      <td class="num">${c && c.summary.pm ? fmtNum(c.summary.pm.allPrice) : ''}</td>
-      <td>${reds ? `<span class="pill red">${reds}</span>` : (c ? '<span class="pill ok">0</span>' : '')}</td>
-      <td>${v ? `<span class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</span>` : ''}</td>
+      <td class="c-name"><b>${esc(p.name)}</b><div class="muted small">${esc(p.address || '')}</div></td>
+      <td data-label="סוג מבנה">${esc(typeName(p.buildingTypeId))}</td>
+      <td data-label="מנהל פרויקט">${esc(p.pm || '')}</td>
+      <td data-label="גרסה אחרונה">${v ? esc(v.label) + `<div class="muted small">${p.versions.length} גרסאות · ${new Date(v.createdAt).toLocaleDateString('he-IL')}</div>` : '<span class="muted">אין גרסה</span>'}</td>
+      <td class="num" data-label="סה&quot;כ אומדן ₪">${c ? fmtNum(c.pm.price) : ''}</td>
+      <td class="num" data-label="סה&quot;כ מחירון ₪">${c ? fmtNum(c.bench.price) : ''}</td>
+      <td class="num" data-label="סטייה">${dev != null ? `<span class="pill ${dev > db.settings.yellowPct ? 'red' : dev > 0 ? 'warn' : 'ok'}">${dev > 0 ? '+' : ''}${fmtPct(dev)}</span>` : ''}</td>
+      <td class="num" data-label="₪ למ&quot;ר">${c && c.summary.pm ? fmtNum(c.summary.pm.allPrice) : ''}</td>
+      <td data-label="חריגות">${reds ? `<span class="pill red">${reds}</span>` : (c ? '<span class="pill ok">0</span>' : '')}</td>
+      <td data-label="סטטוס">${v ? `<span class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</span>` : ''}</td>
     </tr>`;
   }).join('');
   $('#app').innerHTML = `
@@ -1401,7 +1522,7 @@ function renderHome() {
         <div class="actions"><button class="btn primary" id="newProj">+ פרויקט חדש</button></div>
       </div>
       ${db.projects.length ? `
-      <div class="card flush"><table class="grid">
+      <div class="card flush"><table class="grid home-table">
         <thead><tr><th>פרויקט</th><th>סוג מבנה</th><th>מנהל פרויקט</th><th>גרסה אחרונה</th><th class="num">סה"כ אומדן ₪</th><th class="num">סה"כ מחירון ₪</th><th class="num">סטייה</th><th class="num">₪ למ"ר (ללא מע"מ)</th><th>חריגות</th><th>סטטוס</th></tr></thead>
         <tbody>${rows}</tbody></table></div>` : `
       <div class="empty card">
@@ -1695,7 +1816,7 @@ function renderL2Tab(v, c, S) {
   let body = '', lastCh = null;
   c.rows.forEach(r => {
     const it = ITEM[r.key], x = v.items[r.key];
-    if (r.ch !== lastCh) { body += `<tr class="chapter"><td colspan="15">${CHAPTERS.find(ch => ch.id === r.ch).label}</td></tr>`; lastCh = r.ch; }
+    if (r.ch !== lastCh) { body += `<tr class="chapter"><td colspan="15"><span class="chl">${CHAPTERS.find(ch => ch.id === r.ch).label}</span></td></tr>`; lastCh = r.ch; }
     n++;
     let qtyCell = '', unitCell = '';
     if (it.kind === 'area') {
