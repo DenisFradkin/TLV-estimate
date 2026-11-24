@@ -447,6 +447,12 @@ input.cell.desc-in { min-width: 260px; text-align: right !important; }
 .grid.l2 tr.grand td:first-child, .grid.l2 tr.grand td:nth-child(2) { background: var(--gray-t); }
 @media (max-width: 900px) { .src-split { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .modal-box.wide { height: 96vh; } }
 .src-orig, .src-cap { min-width: 0; overflow: hidden; } .src-cap { overflow: auto; }
+/* שטח לפי היתר */
+.areas label.permit-field { color: #000; font-weight: 700; }
+.areas label.permit-field input.cell { border: 2px solid var(--gold); background: #fffdf3; }
+.kpi.permit { border-top-color: #1f1f1f; }
+.kpi .kpi-area { display: block; font-size: 15px; color: #000; margin-bottom: 2px; }
+.grid tr.permit-row td { background: #fffdf3; }
 
 </style>
 </head>
@@ -596,6 +602,7 @@ const AREA_FIELDS = [
   { key: 'balconies', label: 'שטח חצרות ומרפסות קונזולית (מ"ר)' },
   { key: 'sportsHall', label: 'שטח אולם ספורט (מ"ר) – כשרלוונטי' },
   { key: 'development', label: 'שטח פיתוח (מ"ר)' },
+  { key: 'permit', label: 'שטח לפי היתר בנייה (מ"ר) – כשקיים', permit: true },
 ];
 
 /* מחירון ברירת מחדל – לפי תבנית רמה 2 (מדד 04/2026) */
@@ -690,7 +697,7 @@ function emptyVersion(label, source, level) {
   return {
     id: uid(), label: label || 'גרסה', source: source || 'manual', level: level || 2,
     createdAt: new Date().toISOString(), status: 'טיוטה',
-    areas: { demolition: null, basic: null, pilotis: null, balconies: null, sportsHall: null, development: null },
+    areas: { demolition: null, basic: null, pilotis: null, balconies: null, sportsHall: null, development: null, permit: null },
     items,
     l1: { cost: null, price: null, bnmPct: null, building: null, dev: null, add: null, demolition: null, comm: null },
     declaredTotal: null,
@@ -865,7 +872,10 @@ function calcSummary(v, pm, bench, S, P) {
   const pmBnm = pm.setup ? z(pm.bnm) / pm.setup : 0;
   const bBnm = bench.setup ? bench.bnm / bench.setup : 0;
   const weighted = z(a.basic) + z(a.pilotis) * P.pilotisCoef + z(a.balconies) * P.balconyCoef;
-  return { area, weighted, hallA: z(a.sportsHall), devA, ratio: area ? devA / area : null, pm: one(pm, pmBnm), bench: one(bench, bBnm), vat: S.vat };
+  const permit = z(a.permit);
+  const byPermit = t => permit ? { allPrice: t.price / permit, allCost: t.direct / permit, priceVat: (t.priceVat || 0) / permit } : null;
+  return { area, weighted, hallA: z(a.sportsHall), devA, ratio: area ? devA / area : null, pm: one(pm, pmBnm), bench: one(bench, bBnm), vat: S.vat,
+    permit, pmPermit: byPermit(pm), benchPermit: byPermit(bench) };
 }
 
 /* ---- בדיקות ---- */
@@ -971,6 +981,8 @@ function calcAll(project, v, settings) {
   bench.priceVat = rows.reduce((s, r) => s + z(r.benchVat), 0);
   const l1 = calcL1(v, P, S, pm);
   const summary = calcSummary(v, pm, bench, S, P);
+  if (summary.permit) { summary.pmPermit.priceVat = pm.priceVat / summary.permit; summary.benchPermit.priceVat = bench.priceVat / summary.permit; }
+  l1.unitBasicPermit = summary.permit && l1.unitBasic != null ? l1.basicNet / summary.permit : null;
   const checks = calcChecks(v, pm, bench, S, P, l1);
   return { P, pm, bench, rows, l1, summary, checks };
 }
@@ -1534,7 +1546,10 @@ const Exporter = (() => {
     header(ws, 4, ['תיאור', 'אומדן PRICE', 'כולל מע"מ', 'אומדן COST', 'כולל מע"מ', 'מחירון PRICE', 'כולל מע"מ', 'מחירון COST', 'כולל מע"מ']);
     const s = c.summary, vt = 1 + S.vat;
     row(ws, ['שטח הפרויקט (מ"ר)', s.area], [null, '#,##0']);
+    row(ws, ['שטח משוקלל (מ"ר)', s.weighted], [null, '#,##0']);
+    if (s.permit) row(ws, ['שטח לפי היתר בנייה (מ"ר)', s.permit], [null, '#,##0'], { bold: true });
     row(ws, ['שטח הפיתוח (מ"ר)', s.devA], [null, '#,##0']);
+    if (s.permit) row(ws, ['עלות למ"ר לפי היתר', s.pmPermit.allPrice, s.pmPermit.priceVat, s.pmPermit.allCost, s.pmPermit.allCost * vt, s.benchPermit.allPrice, s.benchPermit.priceVat, s.benchPermit.allCost, s.benchPermit.allCost * vt], [null, NUM, NUM, NUM, NUM, NUM, NUM, NUM, NUM], { bold: true });
     row(ws, ['יחס שטח פיתוח לשטח בניה', s.ratio], [null, '0.00']);
     if (s.pm) [['עלות למ"ר בינוי + פיתוח', 'allPrice', 'allCost'], ['עלות פיתוח המועמסת על 1 מ"ר בניה', 'dev', 'dev'], ['עלות למ"ר בינוי בסיסי', 'basicPrice', 'basicCost'], ['עלות למ"ר בינוי בסיסי כולל בנ"מ', 'basicPriceBnm', 'basicCostBnm']]
       .forEach(([l, a, b]) => row(ws, [l, s.pm[a], s.pm[a] * vt, s.pm[b], s.pm[b] * vt, s.bench[a], s.bench[a] * vt, s.bench[b], s.bench[b] * vt], [null, NUM, NUM, NUM, NUM, NUM, NUM, NUM, NUM]));
@@ -1838,7 +1853,7 @@ function renderHome() {
       <td class="num" data-label="סה&quot;כ אומדן ₪">${c ? fmtNum(c.pm.price) : ''}</td>
       <td class="num" data-label="סה&quot;כ מחירון ₪">${c ? fmtNum(c.bench.price) : ''}</td>
       <td class="num" data-label="סטייה">${dev != null ? `<span class="pill ${dev > db.settings.yellowPct ? 'red' : dev > 0 ? 'warn' : 'ok'}">${dev > 0 ? '+' : ''}${fmtPct(dev)}</span>` : ''}</td>
-      <td class="num" data-label="₪ למ&quot;ר">${c && c.summary.pm ? fmtNum(c.summary.pm.allPrice) : ''}</td>
+      <td class="num" data-label="₪ למ&quot;ר">${c && c.summary.permit ? fmtNum(c.summary.pmPermit.allPrice) + ' <span class="tag" title="לפי שטח היתר">היתר</span>' : (c && c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '')}</td>
       <td data-label="חריגות">${reds ? `<span class="pill red">${reds}</span>` : (c ? '<span class="pill ok">0</span>' : '')}</td>
       <td data-label="סטטוס">${v ? `<span class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</span>` : ''}</td>
     </tr>`;
@@ -1904,7 +1919,9 @@ function renderProject(p, vid) {
     const reds = c.checks.filter(x => x.level === 'red').length, warns = c.checks.filter(x => x.level === 'warn').length;
     const dev = c.bench.price ? (c.pm.price - c.bench.price) / c.bench.price : null;
     const sqmDev = c.summary.pm && c.summary.bench && c.summary.bench.allPrice ? (c.summary.pm.allPrice - c.summary.bench.allPrice) / c.summary.bench.allPrice : null;
-    const bDev = c.l1.unitBasic != null ? (c.l1.unitBasic - c.P.basic) / c.P.basic : null;
+    const PM_ = c.summary.permit;
+    const basicMain = PM_ ? c.l1.unitBasicPermit : c.l1.unitBasic;
+    const bDev = basicMain != null ? (basicMain - c.P.basic) / c.P.basic : null;
     const cls = d => d == null ? '' : d > S.yellowPct ? 'red' : d > 0 ? 'warn' : 'ok';
     const sign = d => d == null ? '' : (d > 0 ? '+' : '') + fmtPct(d);
     const tabs = [['l2', v.level === 2 ? 'רמה 2 – פירוט והשוואה' : 'נתוני רמה 1 והשוואה'], ['l1', 'רמה 1 – סיכום'], ['sum', 'ריכוז עלות למ"ר'], ['checks', `בדיקות והערות ${reds + warns ? `<span class="pill ${reds ? 'red' : 'warn'}">${reds + warns}</span>` : ''}`], ['cmp', 'השוואת גרסאות'], ['src', 'מקור הנתונים']];
@@ -1924,9 +1941,11 @@ function renderProject(p, vid) {
         </div>
       </div>
       <div class="kpis">
-        <div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>
-        <div class="kpi"><span>עלות למ"ר בינוי + פיתוח (ללא מע"מ)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪</b><small>מחירון: ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪ · ${fmtNum(c.summary.area)} מ"ר</small><em class="${cls(sqmDev)}">${sign(sqmDev)}</em></div>
-        <div class="kpi"><span>עלות מ"ר בסיסי נגזרת (רמה 1, ללא מע"מ)</span><b>${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} ₪</b><small>מחירון: ${fmtNum(c.P.basic)} ₪ · שטח משוקלל ${fmtNum(c.l1.weighted)} מ"ר</small><em class="${cls(bDev)}">${sign(bDev)}</em></div>
+        ${PM_ ? `<div class="kpi permit"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר לפי היתר: <strong>${fmtNum(c.summary.pmPermit.priceVat)} ₪</strong> כולל מע"מ · ${fmtNum(c.summary.pmPermit.allPrice)} ₪ ללא מע"מ</small><small class="kpi-area">שטח לפי היתר: <strong>${fmtNum(PM_)} מ"ר</strong></small><small>לפי שטח ראשוני (${fmtNum(c.summary.area)} מ"ר): ${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪ כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
+        : `<div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`}
+        ${PM_ ? `<div class="kpi permit"><span>עלות למ"ר בינוי + פיתוח לפי היתר (ללא מע"מ)</span><b>${fmtNum(c.summary.pmPermit.allPrice)} ₪</b><small>מחירון: ${fmtNum(c.summary.benchPermit.allPrice)} ₪ · ${fmtNum(PM_)} מ"ר לפי היתר</small><small>לפי שטח ראשוני: ${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪ (${fmtNum(c.summary.area)} מ"ר)</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
+        : `<div class="kpi"><span>עלות למ"ר בינוי + פיתוח (ללא מע"מ)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪</b><small>מחירון: ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪ · ${fmtNum(c.summary.area)} מ"ר</small><em class="${cls(sqmDev)}">${sign(sqmDev)}</em></div>`}
+        <div class="kpi ${PM_ ? 'permit' : ''}"><span>עלות מ"ר בסיסי ${PM_ ? 'לפי היתר' : 'נגזרת (רמה 1'}, ללא מע"מ${PM_ ? '' : ')'}</span><b>${basicMain != null ? fmtNum(basicMain) : '—'} ₪</b><small>מחירון: ${fmtNum(c.P.basic)} ₪${PM_ ? ` · ${fmtNum(PM_)} מ"ר לפי היתר` : ` · שטח משוקלל ${fmtNum(c.l1.weighted)} מ"ר`}</small>${PM_ ? `<small>לפי שטח משוקלל (${fmtNum(c.l1.weighted)} מ"ר): ${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} ₪</small>` : ''}<em class="${cls(bDev)}">${sign(bDev)}</em></div>
         <div class="kpi"><span>ממצאי בדיקה</span><b><span class="nw"><span class="dot red"></span>${reds} חריגות</span> <span class="nw"><span class="dot warn"></span>${warns} הערות</span></b><small>סוג מבנה: ${esc(typeName(p.buildingTypeId))}</small></div>
       </div>
       <div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
@@ -2207,7 +2226,7 @@ function renderTab(p, v, c, S) {
 function areasBlock(v) {
   return `<div class="areas">${AREA_FIELDS.map(f => {
     const ch = changedCls(v, 'areas.' + f.key, v.areas[f.key]);
-    return `<label>${f.label}${cellInput('areas.' + f.key, v.areas[f.key], ch)}</label>`;
+    return `<label class="${f.permit ? 'permit-field' : ''}">${f.label}${cellInput('areas.' + f.key, v.areas[f.key], ch)}</label>`;
   }).join('')}
   <label>סה"כ מוצהר ע"י מנהל הפרויקט (₪)${cellInput('declaredTotal', v.declaredTotal, { placeholder: 'לבדיקת התאמה' })}</label></div>`;
 }
@@ -2313,10 +2332,12 @@ function renderSumTab(c, S) {
     <tbody>
       <tr><td class="muted">1</td><td>שטח הפרויקט (מ"ר)</td><td class="num" colspan="4">${fmtNum(s.area)}</td><td class="bsep"></td><td colspan="4"></td><td></td><td class="small muted">סכימת שטחי רכיבי המבנה (לא משוקלל)</td></tr>
       <tr><td class="muted">1א</td><td>שטח משוקלל (מ"ר)</td><td class="num" colspan="4">${fmtNum(s.weighted)}</td><td class="bsep"></td><td colspan="4"></td><td></td><td class="small muted">בסיסי + ${fmtPct(c.P.pilotisCoef, 0)} מפולשת + ${fmtPct(c.P.balconyCoef, 0)} חצרות ומרפסות</td></tr>
+      ${s.permit ? `<tr class="permit-row"><td class="muted">1ג</td><td><b>שטח לפי היתר בנייה (מ"ר)</b></td><td class="num" colspan="4"><b>${fmtNum(s.permit)}</b></td><td class="bsep"></td><td colspan="4"></td><td></td><td class="small muted">משמש לחישוב העלות למ"ר הראשית</td></tr>` : ''}
       ${s.hallA ? `<tr><td class="muted">1ב</td><td>מתוכו שטח אולם ספורט (מ"ר)</td><td class="num" colspan="4">${fmtNum(s.hallA)}</td><td class="bsep"></td><td colspan="4"></td><td></td><td class="small muted">נכלל בשטח הפרויקט, לא בשטח המשוקלל</td></tr>` : ''}
       <tr><td class="muted">2</td><td>שטח הפיתוח (מ"ר)</td><td class="num" colspan="4">${fmtNum(s.devA)}</td><td class="bsep"></td><td colspan="4"></td><td></td><td></td></tr>
       <tr><td class="muted">3</td><td>יחס שטח פיתוח לשטח בניה</td><td class="num" colspan="4">${fmtNum(s.ratio, 2)}</td><td class="bsep"></td><td colspan="4"></td><td></td><td></td></tr>
-      ${line(4, 'עלות למ"ר בינוי + פיתוח (₪/מ"ר)', 'allPrice', 'allCost', 'עלויות / שטח מבנה')}
+      ${s.permit ? `<tr class="permit-row"><td class="muted">4א</td><td><b>עלות למ"ר לפי היתר (₪/מ"ר)</b></td><td class="num"><b>${fmtNum(s.pmPermit.allPrice)}</b></td><td class="num muted">${fmtNum(s.pmPermit.priceVat)}</td><td class="num">${fmtNum(s.pmPermit.allCost)}</td><td class="num muted">${fmtNum(s.pmPermit.allCost * vat)}</td><td class="bsep"></td><td class="num">${fmtNum(s.benchPermit.allPrice)}</td><td class="num muted">${fmtNum(s.benchPermit.priceVat)}</td><td class="num">${fmtNum(s.benchPermit.allCost)}</td><td class="num muted">${fmtNum(s.benchPermit.allCost * vat)}</td><td><span class="dot ${statusOf(s.pmPermit.allPrice, s.benchPermit.allPrice, S)}"></span></td><td class="small muted">עלויות / שטח לפי היתר</td></tr>` : ''}
+      ${line(4, 'עלות למ"ר בינוי + פיתוח (₪/מ"ר)', 'allPrice', 'allCost', s.permit ? 'עלויות / שטח ראשוני' : 'עלויות / שטח מבנה')}
       ${line(5, 'עלות פיתוח המועמסת על 1 מ"ר בניה', 'dev', 'dev', `הנחת עבודה – ${fmtNum(c.P.devPrice)} ₪ למ"ר פיתוח`)}
       ${line(6, 'עלות למ"ר בינוי בסיסי (בניכוי פיתוח)', 'basicPrice', 'basicCost', '')}
       ${line(7, 'עלות למ"ר בינוי בסיסי כולל בנ"מ', 'basicPriceBnm', 'basicCostBnm', 'לפי נוסחת התבנית')}
@@ -2474,7 +2495,8 @@ function renderPrint(p, vid) {
       <div><span>סה"כ אומדן (ללא מע"מ)</span><b>${fmtNum(c.pm.price)} ₪</b></div>
       <div><span>סה"כ לפי מחירון</span><b>${fmtNum(c.bench.price)} ₪</b></div>
       <div><span>סטייה</span><b class="${dev > S.yellowPct ? 'red-t' : dev > 0 ? 'warn-t' : 'ok-t'}">${dev != null ? (dev > 0 ? '+' : '') + fmtPct(dev) + ' (' + fmtNum(c.pm.price - c.bench.price) + ' ₪)' : '—'}</b></div>
-      <div><span>עלות למ"ר ללא מע"מ (אומדן / מחירון)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} / ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪</b></div>
+      ${c.summary.permit ? `<div><span>שטח לפי היתר בנייה</span><b>${fmtNum(c.summary.permit)} מ"ר</b></div><div><span>PRICE למ"ר לפי היתר (אומדן / מחירון, ללא מע"מ)</span><b>${fmtNum(c.summary.pmPermit.allPrice)} / ${fmtNum(c.summary.benchPermit.allPrice)} ₪</b></div><div><span>PRICE למ"ר לפי היתר כולל מע"מ</span><b>${fmtNum(c.summary.pmPermit.priceVat)} ₪</b></div>` : ''}
+      <div><span>עלות למ"ר ללא מע"מ${c.summary.permit ? ' לפי שטח ראשוני' : ''} (אומדן / מחירון)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} / ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪</b></div>
       <div><span>מ"ר בסיסי נגזר ללא מע"מ (אומדן / מחירון)</span><b>${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} / ${fmtNum(c.P.basic)} ₪</b></div>
       <div><span>שטח בניה / משוקלל / פיתוח</span><b>${fmtNum(c.summary.area)} / ${fmtNum(c.l1.weighted)} / ${fmtNum(c.summary.devA)} מ"ר</b></div>
     </section>
