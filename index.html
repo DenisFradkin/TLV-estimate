@@ -469,6 +469,48 @@ input.cell.desc-in { min-width: 260px; text-align: right !important; }
 .grid tr.src-row:last-of-type td, .grid tr.src-row + tr:not(.src-row) td { }
 .report .grid tr.src-row td { font-size: 12.5px; }
 .grid tr.src-open td.bsep, .grid tr.src-row td.bsep { background: #262626 !important; border: 0; }
+/* ===== דשבורד ===== */
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 12px 14px; margin-bottom: 14px; }
+.filters .f-search { flex: 1 1 280px; border: 1px solid #d5d0c2; border-radius: 10px; padding: 8px 12px; font-family: var(--font); font-size: 17px; background: #fff; }
+.filters select { width: auto; min-width: 170px; font-family: var(--font); font-size: 16px; border-radius: 10px; }
+.dash-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 14px; text-align: center; }
+.dash-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; margin-bottom: 18px; }
+.dash-grid h3 { font-size: 19px; margin: 0 0 10px; border-bottom: 3px solid var(--gold); padding-bottom: 6px; display: inline-block; }
+.sec-title { font-size: 22px; margin: 6px 0 10px; }
+ul.attn { list-style: none; margin: 0; padding: 0; }
+ul.attn li a { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; margin-bottom: 6px; border-radius: 10px; text-decoration: none; color: var(--ink); border-inline-start: 5px solid #e2a73a; background: var(--warn-bg); }
+ul.attn li.red a { border-inline-start-color: var(--red); background: var(--red-bg); }
+ul.attn li a span { font-size: 15px; color: #444; }
+ul.attn li a:hover { filter: brightness(.97); }
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 70px; gap: 10px; align-items: center; text-decoration: none; color: var(--ink); font-size: 15px; }
+.bar-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { position: relative; height: 18px; background: #f1ede2; border-radius: 6px; }
+.bar-fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 6px; background: var(--gold); }
+.bar-fill.red { background: #d9534f; } .bar-fill.warn { background: #e8b13a; } .bar-fill.ok { background: #3f9a6a; }
+.bar-bench { position: absolute; top: -4px; bottom: -4px; width: 3px; background: #1f1f1f; border-radius: 2px; }
+.bar-val { font-weight: 700; text-align: left; direction: ltr; }
+.lg-fill, .lg-bench { display: inline-block; width: 16px; height: 10px; border-radius: 3px; background: var(--gold); vertical-align: middle; }
+.lg-bench { width: 3px; height: 14px; background: #1f1f1f; margin-inline-start: 10px; }
+.mini-grid { font-size: 15px; } .mini-grid td, .mini-grid th { padding: 5px 6px; }
+/* פס סטטוס */
+.track { display: flex; align-items: center; gap: 0; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 18px; margin-bottom: 12px; box-shadow: var(--shadow); overflow-x: auto; }
+.track .step { display: flex; flex-direction: column; align-items: center; min-width: 110px; color: #9a9384; text-align: center; }
+.track .step b { font-size: 16px; } .track .step small { font-size: 13px; min-height: 16px; }
+.track .dotn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #ece7da; font-weight: 700; margin-bottom: 3px; }
+.track .step.done { color: #1f1f1f; } .track .step.done .dotn { background: #3f9a6a; color: #fff; }
+.track .step.now { color: #000; } .track .step.now .dotn { background: #1f1f1f; color: var(--gold); box-shadow: 0 0 0 4px rgba(255,192,0,.45); }
+.track .step.back.now .dotn { background: var(--red); color: #fff; }
+.track .line { flex: 1; height: 3px; background: #e4dfd3; min-width: 20px; margin-top: -26px; }
+/* כותרת קבועה בטבלת רמה 2 */
+@media (min-width: 1181px) {
+  .table-wrap:has(> .grid.l2) { max-height: calc(100vh - 80px); overflow: auto; }
+  .grid.l2 thead tr.grp th { top: 0; z-index: 4; }
+  .grid.l2 thead tr:not(.grp) th { top: 33px; z-index: 4; }
+}
+@media (max-width: 1180px) { .dash-kpis { grid-template-columns: repeat(3, 1fr); } .dash-grid { grid-template-columns: 1fr; } }
+@media (max-width: 720px) { .dash-kpis { grid-template-columns: 1fr 1fr; } .filters select { flex: 1 1 45%; min-width: 0; } .bar-row { grid-template-columns: 38% 1fr 58px; font-size: 13px; } .track .step { min-width: 80px; } }
+@media print { .track { display: none; } }
 
 </style>
 </head>
@@ -479,7 +521,7 @@ input.cell.desc-in { min-width: 260px; text-align: right !important; }
     <span><b>בקרת אומדנים</b><small>ב.ד. אטלס הנדסה וניהול פרויקטים</small></span>
   </a>
   <nav>
-    <a href="#/" data-nav="home"><i>▦</i><span>פרויקטים</span></a>
+    <a href="#/" data-nav="home"><i>▦</i><span>לוח בקרה</span></a>
     <a href="#/settings" data-nav="settings"><i>⚙</i><span>מחירון והגדרות</span></a>
     <span id="syncState" class="sync"></span>
   </nav>
@@ -1854,13 +1896,94 @@ function latest(p) { return p.versions[p.versions.length - 1]; }
 function typeName(id) { const t = Store.get().settings.buildingTypes.find(b => b.id === id); return t ? t.name : '—'; }
 
 /* ---------- דף בית ---------- */
+/* ---------- פס התקדמות סטטוס ---------- */
+function statusTrack(v) {
+  const log = [{ status: 'טיוטה', at: v.createdAt }, ...(v.statusLog || [])];
+  const lastAt = st => { const e = log.filter(x => x.status === st).pop(); return e ? new Date(e.at).toLocaleDateString('he-IL') : ''; };
+  const final = v.status === 'אושר בהסתייגות' ? 'אושר בהסתייגות' : 'אושר';
+  const steps = ['טיוטה', 'בבדיקה', 'הוחזר לתיקון', final];
+  const cur = steps.indexOf(v.status);
+  return `<div class="track">${steps.map((st, i) => {
+    const done = lastAt(st) && i <= cur, now = i === cur;
+    return `<div class="step ${now ? 'now' : done ? 'done' : ''} ${st === 'הוחזר לתיקון' ? 'back' : ''}"><span class="dotn">${done && !now ? '✓' : i + 1}</span><b>${st}</b><small>${lastAt(st) || ''}</small></div>`;
+  }).join('<span class="line"></span>')}</div>`;
+}
+
+/* ---------- דשבורד חכם (דף בית) ---------- */
+const LS_FILTER = 'atlas-est-filter';
+function loadFilter() { try { return JSON.parse(localStorage.getItem(LS_FILTER)) || {}; } catch (e) { return {}; } }
+function saveFilter(f) { try { localStorage.setItem(LS_FILTER, JSON.stringify(f)); } catch (e) { } }
+const APPROVED = ['אושר', 'אושר בהסתייגות'];
+
+function projectStats(p, S) {
+  const v = latest(p); if (!v) return { p, v: null };
+  const c = calcAll(p, v, S);
+  const area = c.summary.permit || c.summary.area;
+  const sqm = area ? c.pm.price / area : null, bsqm = area ? c.bench.price / area : null;
+  const dev = c.bench.price ? (c.pm.price - c.bench.price) / c.bench.price : null;
+  const reds = c.checks.filter(x => x.level === 'red');
+  const statusAt = (v.statusLog && v.statusLog.length ? v.statusLog[v.statusLog.length - 1].at : v.createdAt);
+  const days = Math.floor((Date.now() - new Date(statusAt)) / 864e5);
+  return { p, v, c, sqm, bsqm, dev, reds, days, byPermit: !!c.summary.permit };
+}
+
 function renderHome() {
-  const db = Store.get();
-  const rows = db.projects.map(p => {
-    const v = latest(p);
-    let c = null; if (v) c = calcAll(p, v, db.settings);
-    const reds = c ? c.checks.filter(x => x.level === 'red').length : 0;
-    const dev = c && c.bench.price ? (c.pm.price - c.bench.price) / c.bench.price : null;
+  const db = Store.get(), S = db.settings;
+  const f = loadFilter();
+  const all = db.projects.map(p => projectStats(p, S));
+  const pms = [...new Set(db.projects.map(p => p.pm).filter(Boolean))].sort();
+  const q = (f.q || '').trim();
+  const list = all.filter(x =>
+    (!q || [x.p.name, x.p.address, x.p.pm].some(t => (t || '').includes(q))) &&
+    (!f.type || x.p.buildingTypeId === f.type) && (!f.pm || x.p.pm === f.pm) &&
+    (!f.status || (x.v && x.v.status === f.status)));
+  const withV = list.filter(x => x.v);
+  const cnt = st => withV.filter(x => x.v.status === st).length;
+  const devs = withV.filter(x => x.dev != null).map(x => x.dev);
+  const avgDev = devs.length ? devs.reduce((a, b) => a + b, 0) / devs.length : null;
+  const totalVat = withV.reduce((a, x) => a + (x.c.pm.priceVat || 0), 0);
+  const cls = d => d == null ? '' : d > S.yellowPct ? 'red' : d > 0 ? 'warn' : 'ok';
+  const sign = d => d == null ? '—' : (d > 0 ? '+' : '') + fmtPct(d);
+
+  // דורש טיפול
+  const attention = withV.flatMap(x => {
+    const out = [];
+    if (x.dev != null && x.dev > S.yellowPct && !APPROVED.includes(x.v.status)) out.push({ x, lvl: 'red', why: `חריגה של ${sign(x.dev)} מהמחירון (${fmtNum(x.c.pm.price - x.c.bench.price)} ₪)` });
+    if (['טיוטה', 'בבדיקה'].includes(x.v.status) && x.days >= 7) out.push({ x, lvl: 'warn', why: `ממתין ב"${x.v.status}" כבר ${x.days} ימים` });
+    if (x.v.status === 'הוחזר לתיקון' && x.days >= 14) out.push({ x, lvl: 'warn', why: `הוחזר לתיקון לפני ${x.days} ימים – טרם התקבלה גרסה מתוקנת` });
+    return out;
+  }).sort((a, b) => (a.lvl === 'red' ? 0 : 1) - (b.lvl === 'red' ? 0 : 1)).slice(0, 8);
+
+  // גרף ₪ למ"ר מול מחירון
+  const chartItems = withV.filter(x => x.sqm).sort((a, b) => b.sqm - a.sqm).slice(0, 14);
+  const maxV = Math.max(1, ...chartItems.map(x => Math.max(x.sqm, x.bsqm || 0))) * 1.08;
+  const chart = chartItems.length ? `<div class="bars">${chartItems.map(x => {
+    const w = x.sqm / maxV * 100, bw = (x.bsqm || 0) / maxV * 100;
+    return `<a class="bar-row" href="#/p/${x.p.id}" title="${esc(x.p.name)}: ${fmtNum(x.sqm)} ₪ למ"ר · מחירון ${fmtNum(x.bsqm)} ₪">
+      <span class="bar-name">${esc(x.p.name)}${x.byPermit ? ' <span class="tag">היתר</span>' : ''}</span>
+      <span class="bar-track"><span class="bar-fill ${cls(x.dev)}" style="width:${w}%"></span>${x.bsqm ? `<span class="bar-bench" style="inset-inline-start:${bw}%"></span>` : ''}</span>
+      <span class="bar-val">${fmtNum(x.sqm)}</span></a>`;
+  }).join('')}</div><p class="legend muted small"><span class="lg-fill"></span> ₪ למ"ר לפי האומדן (ללא מע"מ) <span class="lg-bench"></span> לפי המחירון · לפי שטח היתר כשקיים</p>` : '<p class="muted">אין עדיין נתונים לגרף.</p>';
+
+  // מחירון פנימי – לפי אומדנים מאושרים
+  const byType = S.buildingTypes.map(t => {
+    const ap = all.filter(x => x.v && x.p.buildingTypeId === t.id && APPROVED.includes(x.v.status) && x.sqm);
+    const avg = k => ap.length ? ap.reduce((a, x) => a + (k(x) || 0), 0) / ap.length : null;
+    return { t, n: ap.length, sqm: avg(x => x.sqm), basic: avg(x => x.byPermit ? x.c.l1.unitBasicPermit : x.c.l1.unitBasic), bench: t.prices.basic };
+  }).filter(r => r.n);
+
+  // ניתוח לפי מנהל פרויקט
+  const byPm = pms.map(pm => {
+    const xs = withV.filter(x => x.p.pm === pm);
+    const d = xs.filter(x => x.dev != null).map(x => x.dev);
+    const itemCount = {};
+    xs.forEach(x => x.reds.forEach(r => { if (r.item) itemCount[r.item] = (itemCount[r.item] || 0) + 1; }));
+    const top = Object.entries(itemCount).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => ITEM[k] ? ITEM[k].label : k);
+    return { pm, n: xs.length, dev: d.length ? d.reduce((a, b) => a + b, 0) / d.length : null, top };
+  }).filter(r => r.n);
+
+  const rows = list.map(x => {
+    const { p, v, c } = x;
     return `<tr data-id="${p.id}" class="clickable">
       <td class="c-name"><b>${esc(p.name)}</b><div class="muted small">${esc(p.address || '')}</div></td>
       <td data-label="סוג מבנה">${esc(typeName(p.buildingTypeId))}</td>
@@ -1868,31 +1991,63 @@ function renderHome() {
       <td data-label="גרסה אחרונה">${v ? esc(v.label) + `<div class="muted small">${p.versions.length} גרסאות · ${new Date(v.createdAt).toLocaleDateString('he-IL')}</div>` : '<span class="muted">אין גרסה</span>'}</td>
       <td class="num" data-label="סה&quot;כ אומדן ₪">${c ? fmtNum(c.pm.price) : ''}</td>
       <td class="num" data-label="סה&quot;כ מחירון ₪">${c ? fmtNum(c.bench.price) : ''}</td>
-      <td class="num" data-label="סטייה">${dev != null ? `<span class="pill ${dev > db.settings.yellowPct ? 'red' : dev > 0 ? 'warn' : 'ok'}">${dev > 0 ? '+' : ''}${fmtPct(dev)}</span>` : ''}</td>
-      <td class="num" data-label="₪ למ&quot;ר">${c && c.summary.permit ? fmtNum(c.summary.pmPermit.allPrice) + ' <span class="tag" title="לפי שטח היתר">היתר</span>' : (c && c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '')}</td>
-      <td data-label="חריגות">${reds ? `<span class="pill red">${reds}</span>` : (c ? '<span class="pill ok">0</span>' : '')}</td>
+      <td class="num" data-label="סטייה">${x.dev != null ? `<span class="pill ${cls(x.dev)}">${sign(x.dev)}</span>` : ''}</td>
+      <td class="num" data-label="₪ למ&quot;ר">${x.sqm ? fmtNum(x.sqm) + (x.byPermit ? ' <span class="tag" title="לפי שטח היתר">היתר</span>' : '') : ''}</td>
+      <td data-label="חריגות">${c ? `<span class="pill ${x.reds.length ? 'red' : 'ok'}">${x.reds.length}</span>` : ''}</td>
       <td data-label="סטטוס">${v ? `<span class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</span>` : ''}</td>
     </tr>`;
   }).join('');
+
+  const types = S.buildingTypes.map(t => `<option value="${t.id}" ${f.type === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+  const filtered = q || f.type || f.pm || f.status;
   $('#app').innerHTML = `
     <section class="page">
       <div class="page-head">
-        <div><h1>פרויקטים</h1><p class="muted">אומדנים שהוגשו לבדיקה – השוואה למחירון אגף מבני ציבור</p></div>
+        <div><h1>לוח בקרה</h1><p class="muted">אומדנים שהוגשו לבדיקה – השוואה למחירון אגף מבני ציבור</p></div>
         <div class="actions"><button class="btn primary" id="newProj">+ פרויקט חדש</button></div>
       </div>
       ${db.projects.length ? `
+      <div class="filters card">
+        <input id="fQ" class="f-search" placeholder="🔍 חיפוש לפי שם, כתובת או מנהל פרויקט" value="${esc(q)}">
+        <select id="fType"><option value="">כל סוגי המבנים</option>${types}</select>
+        <select id="fPm"><option value="">כל מנהלי הפרויקטים</option>${pms.map(x => `<option ${f.pm === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+        <select id="fStatus"><option value="">כל הסטטוסים</option>${STATUSES.map(x => `<option ${f.status === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        ${filtered ? '<button class="btn ghost" id="fClear">✕ ניקוי סינון</button>' : ''}
+      </div>
+      <div class="dash-kpis">
+        <div class="kpi"><span>פרויקטים${filtered ? ' (מסוננים)' : ''}</span><b>${list.length}</b><small>שווי כולל ${fmtNum(totalVat / 1e6, 1)} מיליון ₪ כולל מע"מ</small></div>
+        <div class="kpi"><span>בבדיקה / טיוטה</span><b>${cnt('בבדיקה') + cnt('טיוטה')}</b><small>${cnt('בבדיקה')} בבדיקה · ${cnt('טיוטה')} טיוטה</small></div>
+        <div class="kpi"><span>הוחזרו לתיקון</span><b>${cnt('הוחזר לתיקון')}</b><small>ממתינים לגרסה מתוקנת</small></div>
+        <div class="kpi"><span>אושרו</span><b>${cnt('אושר') + cnt('אושר בהסתייגות')}</b><small>${cnt('אושר בהסתייגות')} מתוכם בהסתייגות</small></div>
+        <div class="kpi"><span>סטייה ממוצעת מהמחירון</span><b><bdi dir="ltr">${sign(avgDev)}</bdi></b><small>על פני ${devs.length} פרויקטים</small><em class="${cls(avgDev)}">${avgDev == null ? '' : avgDev > S.yellowPct ? 'מעל הסף' : avgDev > 0 ? 'חריגה קלה' : 'תקין'}</em></div>
+      </div>
+      <div class="dash-grid">
+        <div class="card"><h3>⚠ דורש טיפול</h3>${attention.length ? `<ul class="attn">${attention.map(a => `<li class="${a.lvl}"><a href="#/p/${a.x.p.id}"><b>${esc(a.x.p.name)}</b><span>${esc(a.why)}</span></a></li>`).join('')}</ul>` : '<p class="ok-t">✓ אין פריטים פתוחים</p>'}</div>
+        <div class="card"><h3>₪ למ"ר – אומדן מול מחירון</h3>${chart}</div>
+        <div class="card"><h3>מחירון פנימי – ממוצע אומדנים מאושרים</h3>${byType.length ? `<table class="grid mini-grid"><thead><tr><th>סוג מבנה</th><th>אומדנים</th><th>₪ למ"ר כולל</th><th>מ"ר בסיסי</th><th>מחירון</th></tr></thead><tbody>${byType.map(r => `<tr><td>${esc(r.t.name)}</td><td>${r.n}</td><td>${fmtNum(r.sqm)}</td><td>${fmtNum(r.basic)}</td><td>${fmtNum(r.bench)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">יתמלא אוטומטית כשתסמן אומדנים בסטטוס "אושר". כך נבנה מאגר עלויות אמיתי לפי סוג מבנה.</p>'}</div>
+        <div class="card"><h3>לפי מנהל פרויקט</h3>${byPm.length ? `<table class="grid mini-grid"><thead><tr><th>מנהל פרויקט</th><th>פרויקטים</th><th>סטייה ממוצעת</th><th>חורג בדרך כלל ב</th></tr></thead><tbody>${byPm.map(r => `<tr><td>${esc(r.pm)}</td><td>${r.n}</td><td><span class="pill ${cls(r.dev)}">${sign(r.dev)}</span></td><td class="small">${esc(r.top.join(', ') || '—')}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">הזן שם מנהל פרויקט בפרטי הפרויקט כדי לראות ניתוח.</p>'}</div>
+      </div>
+      <h2 class="sec-title">כל הפרויקטים${filtered ? ` <small class="muted">(${list.length} מתוך ${all.length})</small>` : ''}</h2>
       <div class="card flush"><table class="grid home-table">
         <thead><tr><th>פרויקט</th><th>סוג מבנה</th><th>מנהל פרויקט</th><th>גרסה אחרונה</th><th class="num">סה"כ אומדן ₪</th><th class="num">סה"כ מחירון ₪</th><th class="num">סטייה</th><th class="num">₪ למ"ר (ללא מע"מ)</th><th>חריגות</th><th>סטטוס</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>` : `
+        <tbody>${rows || '<tr><td colspan="10" class="muted">אין פרויקטים שמתאימים לסינון</td></tr>'}</tbody></table></div>` : `
       <div class="empty card">
         <h2>עוד אין פרויקטים</h2>
-        <p>צור פרויקט, ואז ייבא את קובץ האקסל של מנהל הפרויקט, הדבק טבלה או הקלד את האומדן ידנית.</p>
+        <p>צור פרויקט, ואז ייבא את קובץ האקסל או ה-PDF של מנהל הפרויקט, הדבק טבלה או הקלד את האומדן ידנית.</p>
         <button class="btn primary" id="newProj2">+ פרויקט חדש</button>
       </div>`}
-      <p class="muted small foot">הנתונים נשמרים בדפדפן במחשב זה · מומלץ לייצא גיבוי מעת לעת (מחירון והגדרות ← גיבוי)${db.savedAt ? ' · נשמר לאחרונה ' + new Date(db.savedAt).toLocaleString('he-IL') : ''}</p>
+      <p class="muted small foot">${Store.mode() === 'cloud' ? 'הנתונים נשמרים ב-Firebase ומשותפים לכל המשתמשים' : 'הנתונים נשמרים בדפדפן במחשב זה'} · גיבוי: מחירון והגדרות ← ייצוא גיבוי${db.savedAt ? ' · נשמר לאחרונה ' + new Date(db.savedAt).toLocaleString('he-IL') : ''}</p>
     </section>`;
   $$('tr.clickable').forEach(tr => tr.onclick = () => location.hash = '#/p/' + tr.dataset.id);
   ['#newProj', '#newProj2'].forEach(s => { const b = $(s); if (b) b.onclick = newProjectDialog; });
+  const upd = (k, val) => { const nf = { ...loadFilter(), [k]: val }; saveFilter(nf); renderHome(); };
+  if ($('#fQ')) {
+    let t; $('#fQ').oninput = e => { clearTimeout(t); t = setTimeout(() => { upd('q', e.target.value); const el = $('#fQ'); el.focus(); el.setSelectionRange(el.value.length, el.value.length); }, 350); };
+    $('#fType').onchange = e => upd('type', e.target.value);
+    $('#fPm').onchange = e => upd('pm', e.target.value);
+    $('#fStatus').onchange = e => upd('status', e.target.value);
+    if ($('#fClear')) $('#fClear').onclick = () => { saveFilter({}); renderHome(); };
+  }
 }
 
 function projectFields(p) {
@@ -1956,6 +2111,7 @@ function renderProject(p, vid) {
           <button class="btn ghost danger" id="delV">מחק גרסה</button>
         </div>
       </div>
+      ${statusTrack(v)}
       <div class="kpis">
         ${PM_ ? `<div class="kpi permit"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר לפי היתר: <strong>${fmtNum(c.summary.pmPermit.priceVat)} ₪</strong> כולל מע"מ · ${fmtNum(c.summary.pmPermit.allPrice)} ₪ ללא מע"מ</small><small class="kpi-area">שטח לפי היתר: <strong>${fmtNum(PM_)} מ"ר</strong></small><small>לפי שטח ראשוני (${fmtNum(c.summary.area)} מ"ר): ${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪ כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
         : `<div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`}
@@ -1985,7 +2141,7 @@ function renderProject(p, vid) {
   $('#delP').onclick = () => { if (confirm(`למחוק את הפרויקט "${p.name}" על כל הגרסאות?`)) { p.versions.forEach(x => Files.remove(x.sourceFile)); Store.removeProject(p.id); location.hash = '#/'; } };
   if (!v) return;
   $('#vLabel').onchange = e => { v.label = e.target.value; Store.save(p.id); renderProject(p, v.id); };
-  $('#vStatus').onchange = e => { v.status = e.target.value; Store.save(p.id); toast('הסטטוס עודכן'); renderProject(p, v.id); };
+  $('#vStatus').onchange = e => { v.status = e.target.value; (v.statusLog = v.statusLog || []).push({ status: v.status, at: new Date().toISOString() }); Store.save(p.id); toast('הסטטוס עודכן'); renderProject(p, v.id); };
   $('#dupV').onclick = () => {
     const n = JSON.parse(JSON.stringify(v)); n.id = uid(); n.createdAt = new Date().toISOString();
     n.label = 'עותק בודק – ' + v.label; n.source = 'copy'; n.status = 'בבדיקה';
