@@ -453,6 +453,12 @@ input.cell.desc-in { min-width: 260px; text-align: right !important; }
 .kpi.permit { border-top-color: #1f1f1f; }
 .kpi .kpi-area { display: block; font-size: 15px; color: #000; margin-bottom: 2px; }
 .grid tr.permit-row td { background: #fffdf3; }
+.calc-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: #fff; border: 2px dashed #b9a76a; border-radius: 10px; padding: 6px 8px; text-align: center; }
+.calc-box span { font-size: 15px; color: #000; font-weight: 700; }
+.calc-box b { font-size: 22px; color: #1f1f1f; }
+.calc-box small { font-size: 12px; color: var(--muted); }
+.areas label.calc-field { color: #000; font-weight: 700; }
+.calc-val { border: 1px dashed #9c8a4a; background: #f3efe2; border-radius: 5px; padding: 4px 6px; min-height: 38px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #1f1f1f; }
 
 </style>
 </head>
@@ -2223,12 +2229,15 @@ function renderTab(p, v, c, S) {
   return renderL2Tab(v, c, S);
 }
 
-function areasBlock(v) {
+function areasBlock(v, c) {
+  const w = c ? c.summary.weighted : null;
+  const wBox = c ? `<label class="calc-field" title="מחושב אוטומטית: בסיסי + ${fmtPct(c.P.pilotisCoef, 0)} מפולשת + ${fmtPct(c.P.balconyCoef, 0)} חצרות ומרפסות">שטח משוקלל (מ"ר) – מחושב<div class="calc-val">${w ? fmtNum(w) : '—'}</div></label>` : '';
   return `<div class="areas">${AREA_FIELDS.map(f => {
     const ch = changedCls(v, 'areas.' + f.key, v.areas[f.key]);
     return `<label class="${f.permit ? 'permit-field' : ''}">${f.label}${cellInput('areas.' + f.key, v.areas[f.key], ch)}</label>`;
   }).join('')}
-  <label>סה"כ מוצהר ע"י מנהל הפרויקט (₪)${cellInput('declaredTotal', v.declaredTotal, { placeholder: 'לבדיקת התאמה' })}</label></div>`;
+  <label>סה"כ מוצהר ע"י מנהל הפרויקט (₪)${cellInput('declaredTotal', v.declaredTotal, { placeholder: 'לבדיקת התאמה' })}</label>
+  ${wBox}</div>`;
 }
 
 const SUBTOTAL_AFTER = { comm: ['building', 'סה"כ פרק בניה'], devMisc: ['dev', 'סה"כ פרק פיתוח'], addMisc: ['add', 'סה"כ פרק תוספות וחריגים', ['direct', 'סה"כ עלויות בניה ישירות (COST)']], commission: ['overhead', 'סה"כ תקורות / העמסות', ['setup', 'סה"כ עלות הקמה (ישירות + תקורות)']], bnm: null };
@@ -2280,7 +2289,7 @@ function renderL2Tab(v, c, S) {
     if (s) { body += sub(s[0], s[1]); if (s[2]) body += sub(s[2][0], s[2][1], 'major'); }
   });
   body += sub('price', 'סה"כ פרויקט (PRICE)', 'major grand');
-  return `${areasBlock(v)}
+  return `${areasBlock(v, c)}
     <div class="table-wrap"><table class="grid l2">
       <thead>
         <tr class="grp"><th colspan="7">אומדן מנהל הפרויקט</th><th class="bsep"></th><th colspan="2">מחירון (${esc(S.priceIndex)})</th><th class="bsep"></th><th colspan="3">השוואה</th><th></th></tr>
@@ -2292,7 +2301,7 @@ function renderL2Tab(v, c, S) {
 function renderL1Inputs(v, c, S) {
   const f = [['cost', 'סה"כ עלויות ישירות (COST) ₪ – אם פרק הבניה לא ידוע'], ['price', 'סה"כ פרויקט (PRICE) ללא מע"מ ₪'], ['bnmPct', 'בנ"מ (%)', true], ['building', 'סה"כ פרק בניה ₪ (כולל תוספות שנכללות במ"ר בסיסי)'], ['dev', 'סה"כ פרק פיתוח ₪'], ['add', 'תוספות וחריגים שהוגדרו בנפרד ₪'], ['demolition', 'עלות הריסות ₪ (כלול בפרק בניה)'], ['comm', 'עלות מחשוב ותקשורת ₪ (כלול בפרק בניה)']];
   const chap = [['building', 'פרק בניה'], ['dev', 'פרק פיתוח'], ['add', 'תוספות וחריגים'], ['direct', 'סה"כ עלויות ישירות (COST)'], ['overhead', 'תקורות / העמסות'], ['bnm', 'בנ"מ'], ['price', 'סה"כ פרויקט (PRICE)']];
-  return `${areasBlock(v)}
+  return `${areasBlock(v, c)}
     <div class="l1-inputs"><h3>נתוני אומדן ברמת סה"כ</h3><div class="areas">${f.map(([k, l, pct]) => `<label>${l}${cellInput('l1.' + k, v.l1[k], { pct, ...changedCls(v, 'l1.' + k, v.l1[k]) })}</label>`).join('')}</div></div>
     <div class="table-wrap"><table class="grid">
       <thead><tr><th>פרק</th><th class="num">אומדן ₪</th><th class="num">מחירון ₪</th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th></tr></thead>
@@ -2367,6 +2376,8 @@ function renderCmpTab(p, v, S) {
     <div class="table-wrap"><table class="grid">
     <thead><tr><th>סעיף</th><th class="num">${esc(a.label)}</th><th class="num">${esc(b.label)} (נוכחית)</th><th class="num">שינוי ₪</th><th class="num">שינוי %</th></tr></thead>
     <tbody>${keys.map(([k, l]) => { const x = z(ca.pm[k]), y = z(cb.pm[k]); if (!x && !y) return ''; const d = y - x; return `<tr class="${['direct', 'overhead', 'price'].includes(k) ? 'subtotal' : ''}"><td>${esc(l)}</td><td class="num">${fmtNum(x)}</td><td class="num">${fmtNum(y)}</td><td class="num ${d > 0.5 ? 'red-t' : d < -0.5 ? 'ok-t' : ''}">${Math.abs(d) > 0.5 ? fmtNum(d) : ''}</td><td class="num">${x && Math.abs(d) > 0.5 ? fmtPct(d / x) : ''}</td></tr>`; }).join('')}
+    <tr><td>שטח משוקלל (מ"ר)</td><td class="num">${fmtNum(ca.summary.weighted)}</td><td class="num">${fmtNum(cb.summary.weighted)}</td><td class="num">${Math.abs(cb.summary.weighted - ca.summary.weighted) > 0.5 ? fmtNum(cb.summary.weighted - ca.summary.weighted) : ''}</td><td></td></tr>
+    ${ca.summary.permit || cb.summary.permit ? `<tr><td>שטח לפי היתר (מ"ר)</td><td class="num">${fmtNum(ca.summary.permit || null)}</td><td class="num">${fmtNum(cb.summary.permit || null)}</td><td></td><td></td></tr>` : ''}
     <tr><td>עלות למ"ר כולל</td><td class="num">${ca.summary.pm ? fmtNum(ca.summary.pm.allPrice) : ''}</td><td class="num">${cb.summary.pm ? fmtNum(cb.summary.pm.allPrice) : ''}</td><td></td><td></td></tr>
     </tbody></table></div>`;
 }
