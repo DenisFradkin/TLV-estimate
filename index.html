@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- בקרת אומדנים – ב.ד. אטלס. הגדרות Firebase: חפש FIREBASE_CONFIG -->
+<!-- בקרת אומדנים. הגדרות Firebase: חפש FIREBASE_CONFIG -->
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f1f1f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>בקרת אומדנים – ב.ד. אטלס</title>
+<title>בקרת אומדנים</title>
 <style>
 :root {
   --navy: #1f2a44; --navy-2: #2d3b5e; --ink: #1d2433; --muted: #667085; --line: #e3e7ee; --bg: #f4f6f9; --card: #fff;
@@ -518,7 +518,7 @@ ul.attn li a:hover { filter: brightness(.97); }
 <header class="topbar no-print">
   <a class="brand" href="#/">
     <span class="logo">◭</span>
-    <span><b>בקרת אומדנים</b><small>ב.ד. אטלס הנדסה וניהול פרויקטים</small></span>
+    <span><b>בקרת אומדנים</b><small>אגף מבני ציבור</small></span>
   </a>
   <nav>
     <a href="#/" data-nav="home"><i>▦</i><span>לוח בקרה</span></a>
@@ -707,7 +707,7 @@ function defaultSettings() {
 
 /* מילון שיוך – הסדר חשוב: ספציפי לפני כללי */
 const KEYWORDS = [
-  ['__total', ['סהייכ לפני', 'לפני מעיימ', 'סהייכ פרויקט', 'סה"כ לפני מע', 'סה״כ לפני מע', 'סהכ לפני מע', 'סה"כ ללא מע', 'סה"כ פרויקט', 'סה״כ פרויקט', 'סהכ פרויקט', '(price)']],
+  ['__total', ['PRICE', 'price', 'סהייכ לפני', 'לפני מעיימ', 'סהייכ פרויקט', 'סה"כ לפני מע', 'סה״כ לפני מע', 'סהכ לפני מע', 'סה"כ ללא מע', 'סה"כ פרויקט', 'סה״כ פרויקט', 'סהכ פרויקט', '(price)']],
   ['__ignore', ['סה"כ', 'סה״כ', 'סהכ', 'סה"כ', 'מע"מ', 'מע״מ', 'מעמ', 'מעיימ', 'סהייכ', 'שטח משוקלל', 'האומדן אינו כולל']],
   ['bnm', ['בנ"מ', 'בנ״מ', 'בנמ', 'בלצ"מ', 'בלצ״מ', 'בלצמ', 'בלתי נצפ', 'בלתי צפוי']],
   ['commission', ['עמלת חברה', 'חברה עירונית', 'עמלה']],
@@ -725,13 +725,16 @@ const KEYWORDS = [
   ['yard', ['מתקני חצר', 'מתקני', 'הצלל', 'משחקים']],
   ['roofActive', ['גג פעיל']],
   ['devBasic', ['פיתוח']],
-  ['transformer', ['טרפו', 'טרנספורמ', 'מיתוג']],
+  ['transformer', ['טרפו', 'טרנספורמ', 'מיתוג', 'השנאה']],
   ['waterReservoir', ['מאגר', 'משאבות']],
   ['infra', ['העתקת תשתיות', 'תשתיות']],
   ['security', ['ביטחון', 'בטחון', 'אבטחה']],
   ['basic', ['בנייה חדשה', 'בניה חדשה', 'בניי חדשה', 'חדשה', 'משרדים', 'מ"ר ראשוני', 'עלות בסיסי', 'עלות מ"ר', 'בינוי', 'מבנה']],
   ['addMisc', ['ריבוי', 'תוספת', 'מעלית', 'קירות מסך', 'שונות', 'ממ"ד', 'מטבח']],
 ];
+
+/* בדיקת חשבון: כמות × מחיר מול סה"כ, עם סבילות לעיגול מחיר היחידה (חצי ₪ ליחידה) */
+function arithBad(q, p, t) { return q != null && p != null && t != null && Math.abs(q * p - t) > Math.max(1, Math.abs(q) * 0.51); }
 
 function normDesc(s) {
   return String(s || '').replace(/[‎‏]/g, '').replace(/[״]/g, '"').replace(/[׳]/g, "'").replace(/\s+/g, ' ').trim();
@@ -946,7 +949,7 @@ function calcChecks(v, pm, bench, S, P, l1) {
       const x = v.items[i.key];
       if (i.kind === 'area' && num(x.qty) != null && num(x.price) != null && num(x.total) != null) {
         const calc = num(x.qty) * num(x.price);
-        if (Math.abs(calc - num(x.total)) > 1) add('red', i.key, `שגיאה חשבונית: ${fmt(x.qty)} × ${fmt(x.price)} = ${fmt(calc)}, אך בסה"כ נרשם ${fmt(x.total)}`);
+        if (arithBad(num(x.qty), num(x.price), num(x.total))) add('red', i.key, `שגיאה חשבונית: ${fmt(x.qty)} × ${fmt(x.price)} = ${fmt(calc)}, אך בסה"כ נרשם ${fmt(x.total)}`);
       }
       if (i.kind === 'area' && i.areaField && num(x.qty) != null && num(a[i.areaField]) != null && Math.abs(num(x.qty) - num(a[i.areaField])) > 0.5) {
         add('warn', i.key, `הכמות באומדן (${fmt(x.qty)}) שונה מהשטח בפרויקט (${fmt(a[i.areaField])} – ${AREA_FIELDS.find(f => f.key === i.areaField).label})`);
@@ -972,7 +975,7 @@ function calcChecks(v, pm, bench, S, P, l1) {
       if (stated != null && Math.abs(pm.bnm / b.bnm - stated) > 0.002)
         add('warn', 'bnm', `הבנ"מ רשום כ-${pc(stated)} אך בפועל הוא ${pc(pm.bnm / b.bnm)} מסך ההקמה + תקורות – חושב על בסיס אחר`);
     }
-    if (num(v.declaredTotal) != null && Math.abs(num(v.declaredTotal) - pm.price) > 1)
+    if (num(v.declaredTotal) != null && Math.abs(num(v.declaredTotal) - pm.price) > 1 && !(pm.priceVat && Math.abs(num(v.declaredTotal) - pm.priceVat) <= Math.max(1, 0.005 * num(v.declaredTotal))))
       add('red', null, `סה"כ שהצהיר מנהל הפרויקט (${fmt(v.declaredTotal)}) שונה מסכום הסעיפים (${fmt(pm.price)}) – פער ${fmt(num(v.declaredTotal) - pm.price)}`);
     ITEMS.forEach(i => {
       const p = pm[i.key], q = bench[i.key];
@@ -1435,6 +1438,12 @@ const Importer = (() => {
         if (nums.length >= 3) { qty = nums[nums.length - 3]; price = nums[nums.length - 2]; }
       }
       if (ch && String(ch).trim()) chapter = String(ch).trim();
+      // אין עמודת "נושא": זיהוי תחילת פרק התייקרויות מתוך הפירוט, עד שורת סיכום
+      if (!(hd && hd.cols.chapter != null)) {
+        const d0 = normDesc(desc);
+        if (/^(התיקרויות|התייקרויות|התייקרות)/.test(d0)) chapter = 'התייקרויות';
+        else if (/^סה"כ|^סה״כ/.test(d0)) chapter = '';
+      }
       desc = normDesc(desc);
       if (!desc && total == null) continue;
       if (!desc) desc = '(ללא תיאור)';
@@ -1483,7 +1492,15 @@ const Importer = (() => {
       const sumT = list.reduce((s, r) => s + (r.total ?? ((r.qty ?? 0) * (r.price ?? 0))), 0);
       x.total = sumT;
       if (it.kind === 'area') {
-        const q = list.reduce((s, r) => s + (r.qty || 0), 0);
+        // כמות (שטח): שורות התייקרות/תוספת על אותו שטח לא מוסיפות שטח, וכמות זהה לא נספרת פעמיים
+        const INC = /התיקר|התייקר|הצמדה|תוספת מחיר|תוספת של/;
+        const seen = new Set();
+        const q = list.reduce((s, r) => {
+          if (!r.qty) return s;
+          if (INC.test((r.chapter || '') + ' ' + (r.desc || ''))) return s;
+          if (seen.has(r.qty)) return s;
+          seen.add(r.qty); return s + r.qty;
+        }, 0) || Math.max(0, ...list.map(r => r.qty || 0));
         x.qty = q || null;
         x.price = list.length === 1 ? list[0].price : (q ? sumT / q : null);
       }
@@ -1548,7 +1565,7 @@ const Exporter = (() => {
 
   async function toExcel(p, v) {
     const S = Store.get().settings, c = calcAll(p, v, S);
-    const wb = new ExcelJS.Workbook(); wb.creator = 'ב.ד. אטלס – בקרת אומדנים';
+    const wb = new ExcelJS.Workbook(); wb.creator = 'בקרת אומדנים';
     const sub = `${p.name} · ${v.label} · מנהל פרויקט: ${p.pm || '—'} · ${typeName(p.buildingTypeId)} · סטטוס: ${v.status} · ${new Date().toLocaleDateString('he-IL')}`;
 
     /* רמה 2 */
@@ -1707,6 +1724,7 @@ const PdfImport = (() => {
   }
 
   /* ---- פריטי טקסט -> שורות -> עמודות ---- */
+  const numFrag = s => /^[\d,.\-%₪]+$/.test(String(s).trim());
   const isNum = s => /^[\s₪%()\-–.,\d]+$/.test(s) && /\d/.test(s);
 
   function toRows(items) {
@@ -1726,7 +1744,14 @@ const PdfImport = (() => {
         const last = cells[cells.length - 1];
         const gap = last ? last.x0 - it.x1 : 99;
         const tol = Math.max(2.5, (it.h || 8) * 0.55);
-        if (last && gap < tol && !(isNum(last.text) && isNum(it.text) && gap > tol * 0.5)) { last.text = last.text + (gap < (it.h || 8) * 0.12 ? '' : ' ') + it.text; last.x0 = Math.min(last.x0, it.x0); }
+        const heb = t => /[\u05D0-\u05EA]/.test(t);
+        const mixed = !!last && ((numFrag(last.text) && heb(it.text)) || (heb(last.text) && numFrag(it.text)));
+        if (last && gap < tol && !(isNum(last.text) && isNum(it.text) && gap > tol * 0.5) && !(mixed && gap > (it.h || 8) * 0.15)) {
+          // קטעי מספר (ספרות, פסיקים) נקראים משמאל לימין – למשל "5" "," "500" = 5,500 (ולא 500,5)
+          if (numFrag(last.text) && numFrag(it.text) && gap < (it.h || 8) * 0.35) last.text = it.text + last.text;
+          else last.text = last.text + (gap < (it.h || 8) * 0.12 ? '' : ' ') + it.text;
+          last.x0 = Math.min(last.x0, it.x0);
+        }
         else cells.push({ ...it });
       });
       r.cells = cells.map(c => ({ ...c, text: fixHeb(c.text) }));
@@ -2323,7 +2348,7 @@ function renderMapping(p) {
       <div class="map-layout">
         <div class="card flush"><table class="grid map">
           <thead><tr><th>שורה</th><th>פרק</th><th>פירוט (כפי שהגיש מנהל הפרויקט)</th><th class="num">אחוז</th><th class="num">כמות</th><th class="num">מחיר ליח'</th><th class="num">סה"כ</th><th>שיוך לסעיף בתבנית</th></tr></thead>
-          <tbody>${pd.rows.map(r => { const bad = r.qty != null && r.price != null && r.total != null && Math.abs(r.qty * r.price - r.total) > 1; return `<tr class="${r.key === '__unmapped' ? 'unmapped' : r.key === '__ignore' ? 'ignored' : ''} ${bad ? 'arith' : ''}" data-id="${r.id}" ${bad ? `title="כמות × מחיר = ${fmtNum(r.qty * r.price)} – לא תואם לסה&quot;כ. בדוק מול התמונה"` : ''}>
+          <tbody>${pd.rows.map(r => { const bad = arithBad(r.qty, r.price, r.total); return `<tr class="${r.key === '__unmapped' ? 'unmapped' : r.key === '__ignore' ? 'ignored' : ''} ${bad ? 'arith' : ''}" data-id="${r.id}" ${bad ? `title="כמות × מחיר = ${fmtNum(r.qty * r.price)} – לא תואם לסה&quot;כ. בדוק מול התמונה"` : ''}>
             <td class="muted small">${r.src}</td><td class="small">${esc(r.chapter)}</td><td><input class="cell desc-in" data-f="desc" value="${esc(r.desc)}"></td>
             <td class="num"><input class="cell" data-f="pct" value="${r.pct != null ? +(r.pct * 100).toFixed(4) + '%' : ''}"></td>
             <td class="num"><input class="cell" data-f="qty" value="${r.qty ?? ''}"></td>
@@ -2448,7 +2473,7 @@ function renderL2Tab(v, c, S) {
       <td><input class="cell note" data-path="reviewNotes.${r.key}" value="${esc((v.reviewNotes || {})[r.key] || '')}" placeholder="${esc(x.note || 'הערת בודק')}" title="${esc(x.note ? 'הערת מנהל הפרויקט: ' + x.note : '')}"></td>
     </tr>`;
     if (open) r.sources.forEach(sr => {
-      const bad = sr.qty != null && sr.price != null && sr.total != null && Math.abs(sr.qty * sr.price - sr.total) > 1;
+      const bad = arithBad(sr.qty, sr.price, sr.total);
       body += `<tr class="src-row"><td></td><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${sr.pct != null && sr.qty == null ? fmtPct(sr.pct) : fmtNum(sr.price)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}${bad ? ' ⚠' : ''}</td><td class="num">${sr.total != null ? fmtNum(sr.total * vat) : ''}</td><td class="num">${c.pm.price && sr.total != null ? fmtPct(sr.total / c.pm.price) : ''}</td><td class="bsep"></td><td colspan="2" class="small muted">שורה ${esc(sr.src)} במקור</td><td class="bsep"></td><td colspan="4"></td></tr>`;
     });
     const s = SUBTOTAL_AFTER[r.key];
@@ -2667,7 +2692,7 @@ function renderPrint(p, vid) {
   <article class="report">
     <header class="r-head"><div><h1>דוח בדיקת אומדן</h1><h2>${esc(p.name)}</h2>
       <p>${esc([p.address, p.client].filter(Boolean).join(' · '))}</p></div>
-      <div class="r-meta"><div>ב.ד. אטלס הנדסה וניהול פרויקטים</div><div>תאריך: ${new Date().toLocaleDateString('he-IL')}</div><div>מנהל הפרויקט: ${esc(p.pm || '—')}</div><div>גרסה: ${esc(v.label)}</div>${v.sourceFile ? `<div>קובץ מקור: ${esc(v.sourceFile.name)}${v.sourceFile.page ? ' (עמוד ' + v.sourceFile.page + ')' : ''}</div>` : ''}<div>סוג מבנה: ${esc(typeName(p.buildingTypeId))} · שלב: ${esc(p.stage || '—')}</div><div class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</div></div></header>
+      <div class="r-meta"><div>תאריך: ${new Date().toLocaleDateString('he-IL')}</div><div>מנהל הפרויקט: ${esc(p.pm || '—')}</div><div>גרסה: ${esc(v.label)}</div>${v.sourceFile ? `<div>קובץ מקור: ${esc(v.sourceFile.name)}${v.sourceFile.page ? ' (עמוד ' + v.sourceFile.page + ')' : ''}</div>` : ''}<div>סוג מבנה: ${esc(typeName(p.buildingTypeId))} · שלב: ${esc(p.stage || '—')}</div><div class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</div></div></header>
     <section class="r-kpis">
       <div><span>סה"כ אומדן (ללא מע"מ)</span><b>${fmtNum(c.pm.price)} ₪</b></div>
       <div><span>סה"כ לפי מחירון</span><b>${fmtNum(c.bench.price)} ₪</b></div>
