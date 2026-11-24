@@ -615,7 +615,7 @@ function defaultPrices() {
     commissionPct: 0.04,
     bnmPct: 0.15,
     miscBench: null,      // שונות – אם ריק, מחירון = אומדן
-    sportsHall: null,     // ₪ למ"ר אולם ספורט – אם ריק, מחירון = אומדן
+    sportsHall: 8000,     // ₪ למ"ר אולם ספורט (ניתן לעדכון במחירון והגדרות)
   };
 }
 
@@ -1032,6 +1032,8 @@ const Store = (() => {
     d.settings = { ...def, ...s, learned, ranges: { ...def.ranges, ...(s.ranges || {}) } };
     d.settings.buildingTypes = (s.buildingTypes && s.buildingTypes.length ? s.buildingTypes : def.buildingTypes)
       .map(t => ({ ...t, prices: { ...defaultPrices(), ...(t.prices || {}) } }));
+    // החלה חד-פעמית של מחיר ברירת המחדל לאולם ספורט (8,000 ₪ למ"ר) על מחירונים קיימים
+    if (!d.settings.hallPriceV1) { d.settings.buildingTypes.forEach(t => { if (t.prices.sportsHall == null) t.prices.sportsHall = 8000; }); d.settings.hallPriceV1 = true; d._settingsUpgraded = true; }
     let projects = d.projects || [];
     if (!Array.isArray(projects)) projects = Object.values(projects);
     d.projects = projects.filter(Boolean).map(p => ({ ...p, versions: (Array.isArray(p.versions) ? p.versions : Object.values(p.versions || {})).filter(Boolean).map(fixVersion) }))
@@ -1080,12 +1082,12 @@ const Store = (() => {
         lastRemote = JSON.stringify(raw);
         db = normalize(raw ? { settings: raw.settings, projects: raw.projects } : null);
         mode = 'cloud';
-        if (!raw || !raw.settings) { settingsDirty = true; flush(); }
+        if (!raw || !raw.settings || db._settingsUpgraded) { delete db._settingsUpgraded; settingsDirty = true; flush(); }
         listen();
         return db;
       } catch (e) { console.error(e); mode = 'local-fallback'; loadError = loadError || e.message; }
     } else if (FIREBASE_CONFIG.projectId) mode = 'local-fallback';
-    db = loadLocal();
+    db = loadLocal(); if (db._settingsUpgraded) { delete db._settingsUpgraded; saveLocal(); }
     return db;
   }
 
@@ -2396,7 +2398,7 @@ const PRICE_FIELDS = [
   ['demolition', 'הריסות – ₪ למ"ר'], ['basic', 'מ"ר בסיסי – ₪'], ['pilotisCoef', 'מקדם קומה מפולשת', 'pct'], ['balconyCoef', 'מקדם חצרות ומרפסות', 'pct'],
   ['commPct', 'מחשוב ותקשורת – % מעלות המבנה', 'pct'], ['devPrice', 'פיתוח – ₪ למ"ר'], ['planningPct', 'תכנון, ניהול ופיקוח – % מעלות ישירה', 'pct'],
   ['govFeesPct', 'אגרות ממשלתיות – % מעלות ישירה', 'pct'], ['waterPrice', 'אגרות מים וביוב – ₪ למ"ר'], ['otherFeesPct', 'אגרות נוספות – % מעלות ישירה', 'pct'],
-  ['controlPrice', 'מכון בקרה – ₪ למ"ר'], ['commissionPct', 'עמלת חברה עירונית – %', 'pct'], ['bnmPct', 'בנ"מ – %', 'pct'], ['miscBench', 'שונות (תוספות) – ₪ קבוע, ריק = כמו האומדן'], ['sportsHall', 'אולם ספורט – ₪ למ"ר, ריק = כמו האומדן'],
+  ['controlPrice', 'מכון בקרה – ₪ למ"ר'], ['commissionPct', 'עמלת חברה עירונית – %', 'pct'], ['bnmPct', 'בנ"מ – %', 'pct'], ['miscBench', 'שונות (תוספות) – ₪ קבוע, ריק = כמו האומדן'], ['sportsHall', 'אולם ספורט – ₪ למ"ר'],
 ];
 
 function renderSettings() {
