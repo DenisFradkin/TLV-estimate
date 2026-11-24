@@ -459,6 +459,16 @@ input.cell.desc-in { min-width: 260px; text-align: right !important; }
 .calc-box small { font-size: 12px; color: var(--muted); }
 .areas label.calc-field { color: #000; font-weight: 700; }
 .calc-val { border: 1px dashed #9c8a4a; background: #f3efe2; border-radius: 5px; padding: 4px 6px; min-height: 38px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #1f1f1f; }
+/* פירוט שורות מקור – עיצוב מעודכן */
+.src-toggle { font-family: var(--font); font-size: 14px; font-weight: 700; border: 1px solid #bf9000; background: #fff; color: #7a5c00; border-radius: 8px; padding: 2px 10px; margin-inline-end: 8px; vertical-align: middle; }
+.src-toggle:hover { background: var(--gold-3); }
+.src-toggle.open { background: #1f1f1f; color: var(--gold); border-color: #1f1f1f; }
+.grid tr.src-open td { background: var(--gold-3) !important; font-weight: 700; border-bottom: 2px solid var(--gold); }
+.grid tr.src-row td { font-family: var(--font); font-style: normal !important; font-size: 15px; color: #333; background: #fffdf6 !important; border-top: 0; border-bottom: 1px solid #efe6c8; }
+.grid tr.src-row td.desc { font-style: normal; padding-inline-start: 14px; border-right: 4px solid var(--gold); }
+.grid tr.src-row:last-of-type td, .grid tr.src-row + tr:not(.src-row) td { }
+.report .grid tr.src-row td { font-size: 12.5px; }
+.grid tr.src-open td.bsep, .grid tr.src-row td.bsep { background: #262626 !important; border: 0; }
 
 </style>
 </head>
@@ -1518,8 +1528,8 @@ const Exporter = (() => {
       rr.getCell(14).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
       if (FILL[r.status]) rr.getCell(13).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL[r.status] } };
       if (r.sources.length > 1) r.sources.forEach(sr => {
-        const sx = row(w2, ['', '   ↳ ' + sr.desc, sr.qty, sr.price, sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null), '', '', '', '', '', '', '', '', 'שורה ' + sr.src + ' במקור'], [null, null, '#,##0', NUM, NUM]);
-        sx.eachCell({ includeEmpty: true }, cc => { cc.font = { italic: true, color: { argb: 'FF595959' } }; cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F5EF' } }; });
+        const sx = row(w2, ['', sr.desc, sr.qty, sr.price, sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null), '', '', '', '', '', '', '', '', 'שורה ' + sr.src + ' במקור'], [null, null, '#,##0', NUM, NUM]);
+        sx.eachCell({ includeEmpty: true }, cc => { cc.font = { color: { argb: 'FF404040' }, size: 11 }; cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F5EF' } }; });
       });
       (after[r.key] || []).forEach(([k, l]) => sub2(k, l));
     });
@@ -2264,9 +2274,9 @@ function renderL2Tab(v, c, S) {
     const computed = num(x.total) == null && r.pm != null;
     const benchUnit = (it.kind === 'pct' || ['govFees', 'otherFees'].includes(r.key)) ? fmtPct(r.benchUnit, 2) : (r.benchUnit != null ? fmtNum(r.benchUnit) : '');
     const multi = r.sources.length > 1, open = multi && state.expanded.has(r.key);
-    body += `<tr class="st-${r.status} ${multi ? 'has-src' : ''}">
+    body += `<tr class="st-${r.status} ${multi ? 'has-src' : ''} ${open ? 'src-open' : ''}">
       <td class="muted">${n}</td>
-      <td class="desc">${multi ? `<button class="src-toggle" data-src="${r.key}" title="${open ? 'כיווץ' : 'הצג את השורות שמהן הגיע הסכום'}">${open ? '▾' : '◂'} ${r.sources.length} שורות</button>` : ''}${esc(r.label)}${it.noVat ? ' <span class="tag">ללא מע"מ</span>' : ''}${ADD_KEYS.includes(r.key) && r.pm ? `<label class="inbasic" title="תוספת נכללת בעלות המ&quot;ר הבסיסי אלא אם הוגדרה בנפרד"><input type="checkbox" data-path="inBasic.${r.key}" ${inBasicOf(v, r.key) ? 'checked' : ''}> נכלל במ"ר בסיסי</label>` : ''}</td>
+      <td class="desc">${multi ? `<button class="src-toggle ${open ? 'open' : ''}" data-src="${r.key}" title="${open ? 'סגירת הפירוט' : 'הצג את השורות שמהן הגיע הסכום'}">${open ? '−' : '+'} פירוט (${r.sources.length})</button>` : ''}${esc(r.label)}${it.noVat ? ' <span class="tag">ללא מע"מ</span>' : ''}${ADD_KEYS.includes(r.key) && r.pm ? `<label class="inbasic" title="תוספת נכללת בעלות המ&quot;ר הבסיסי אלא אם הוגדרה בנפרד"><input type="checkbox" data-path="inBasic.${r.key}" ${inBasicOf(v, r.key) ? 'checked' : ''}> נכלל במ"ר בסיסי</label>` : ''}</td>
       <td class="num">${qtyCell}</td>
       <td class="num">${unitCell}</td>
       <td class="num">${cellInput(`items.${r.key}.total`, x.total, { ...totalCh, placeholder: computed ? fmtNum(r.pm) : '' , cls: (totalCh.cls || '') + ' strong'})}</td>
@@ -2283,7 +2293,7 @@ function renderL2Tab(v, c, S) {
     </tr>`;
     if (open) r.sources.forEach(sr => {
       const bad = sr.qty != null && sr.price != null && sr.total != null && Math.abs(sr.qty * sr.price - sr.total) > 1;
-      body += `<tr class="src-row"><td></td><td class="desc">↳ ${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${sr.pct != null && sr.qty == null ? fmtPct(sr.pct) : fmtNum(sr.price)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}${bad ? ' ⚠' : ''}</td><td class="num">${sr.total != null ? fmtNum(sr.total * vat) : ''}</td><td class="num">${c.pm.price && sr.total != null ? fmtPct(sr.total / c.pm.price) : ''}</td><td class="bsep"></td><td colspan="2" class="small muted">שורה ${esc(sr.src)} במקור</td><td class="bsep"></td><td colspan="4"></td></tr>`;
+      body += `<tr class="src-row"><td></td><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${sr.pct != null && sr.qty == null ? fmtPct(sr.pct) : fmtNum(sr.price)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}${bad ? ' ⚠' : ''}</td><td class="num">${sr.total != null ? fmtNum(sr.total * vat) : ''}</td><td class="num">${c.pm.price && sr.total != null ? fmtPct(sr.total / c.pm.price) : ''}</td><td class="bsep"></td><td colspan="2" class="small muted">שורה ${esc(sr.src)} במקור</td><td class="bsep"></td><td colspan="4"></td></tr>`;
     });
     const s = SUBTOTAL_AFTER[r.key];
     if (s) { body += sub(s[0], s[1]); if (s[2]) body += sub(s[2][0], s[2][1], 'major'); }
@@ -2515,7 +2525,7 @@ function renderPrint(p, vid) {
     <section><h3>ממצאים (${reds.length} חריגות, ${warns.length} הערות)</h3><ul class="checks">${c.checks.map(x => `<li class="${x.level}"><span class="dot ${x.level}"></span><div>${x.item ? `<b>${esc(ITEM[x.item]?.label || '')}</b> – ` : ''}${esc(x.text)}</div></li>`).join('') || '<li>לא נמצאו חריגות</li>'}</ul></section>
     <section class="r-table"><h3>השוואה למחירון</h3>
       <table class="grid"><thead><tr><th>סעיף</th><th class="num">כמות</th><th class="num">אומדן ₪</th><th class="num">מחירון ₪</th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th><th>הערות</th></tr></thead><tbody>
-      ${(() => { let out = '', last = null; c.rows.forEach(r => { if (r.hidden || (!r.pm && !r.bench)) return; if (r.ch !== last) { out += `<tr class="chapter"><td colspan="8">${CHAPTERS.find(x => x.id === r.ch).label}</td></tr>`; last = r.ch; } out += `<tr><td>${esc(r.label)}</td><td class="num">${fmtNum(r.qty)}</td><td class="num">${fmtNum(r.pm)}</td><td class="num">${fmtNum(r.bench)}</td><td class="num">${r.status === 'same' ? '' : fmtNum(r.diff)}</td><td class="num">${r.status === 'same' || r.diffPct == null ? '' : (r.diffPct > 0 ? '+' : '') + fmtPct(r.diffPct)}</td><td><span class="dot ${r.status}"></span></td><td class="small">${esc((v.reviewNotes || {})[r.key] || '')}</td></tr>`; if (r.sources.length > 1) r.sources.forEach(sr => { out += `<tr class="src-row"><td class="desc">↳ ${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}</td><td></td><td></td><td></td><td></td><td class="small">שורה ${esc(sr.src)} במקור</td></tr>`; }); }); return out; })()}
+      ${(() => { let out = '', last = null; c.rows.forEach(r => { if (r.hidden || (!r.pm && !r.bench)) return; if (r.ch !== last) { out += `<tr class="chapter"><td colspan="8">${CHAPTERS.find(x => x.id === r.ch).label}</td></tr>`; last = r.ch; } out += `<tr><td>${esc(r.label)}</td><td class="num">${fmtNum(r.qty)}</td><td class="num">${fmtNum(r.pm)}</td><td class="num">${fmtNum(r.bench)}</td><td class="num">${r.status === 'same' ? '' : fmtNum(r.diff)}</td><td class="num">${r.status === 'same' || r.diffPct == null ? '' : (r.diffPct > 0 ? '+' : '') + fmtPct(r.diffPct)}</td><td><span class="dot ${r.status}"></span></td><td class="small">${esc((v.reviewNotes || {})[r.key] || '')}</td></tr>`; if (r.sources.length > 1) r.sources.forEach(sr => { out += `<tr class="src-row"><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}</td><td></td><td></td><td></td><td></td><td class="small">שורה ${esc(sr.src)} במקור</td></tr>`; }); }); return out; })()}
       ${[['direct', 'סה"כ עלויות ישירות (COST)'], ['overhead', 'סה"כ תקורות'], ['bnm', 'בנ"מ'], ['price', 'סה"כ פרויקט (PRICE) ללא מע"מ']].map(([k, l]) => `<tr class="subtotal"><td>${l}</td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td></td><td></td></tr>`).join('')}
       </tbody></table></section>
     <section class="r-table"><h3>ריכוז עלות למ"ר (ללא מע"מ)</h3>
