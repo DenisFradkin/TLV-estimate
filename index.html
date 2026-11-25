@@ -552,6 +552,18 @@ input.cell.apr-in { border: 2px solid #bf9000 !important; background: #fffbea; f
 .r-apr div { background: #f3f9ee !important; border-color: #a9d08e !important; }
 .r-kpis.r-apr { grid-template-columns: repeat(5, 1fr); }
 
+/* שורת "מאושר" בתוך הכרטיסים */
+.kpi { display: flex; flex-direction: column; }
+.kpi .apr-line { margin-top: auto; padding-top: 10px; border-top: 2px dashed #a9d08e; margin-inline: -4px; }
+.kpi .apr-line { background: linear-gradient(#f3f9ee, #f3f9ee) padding-box; border-radius: 0 0 8px 8px; padding: 8px 6px 6px; }
+.kpi .apr-line span { display: inline; font-size: 15px; font-weight: 700; color: #548235; margin-inline-end: 6px; }
+.kpi .apr-line b { display: inline; font-size: 24px; color: #375623; }
+.kpi .apr-line i { display: block; font-style: normal; font-size: 14px; color: #c00000; font-weight: 700; }
+.kpi .apr-line small { display: block; font-size: 14px; color: #375623; }
+@media (min-width: 1181px) { .kpis.k5 .kpi { min-height: 250px; } }
+.kpi em { position: static; align-self: center; margin-top: 6px; }
+.kpi .apr-line { order: 2; }
+
 </style>
 </head>
 <body>
@@ -1143,6 +1155,9 @@ function calcAll(project, v, settings) {
   if (summary.permit) { summary.pmPermit.priceVat = pm.priceVat / summary.permit; summary.benchPermit.priceVat = bench.priceVat / summary.permit; }
   l1.unitBasicPermit = summary.permit && l1.unitBasic != null ? l1.basicNet / summary.permit : null;
   const checks = calcChecks(v, pm, bench, S, P, l1);
+  const l1Apr = calcL1(v, P, S, apr);
+  approval.unitBasic = l1Apr.unitBasic;
+  approval.unitBasicPermit = summary.permit && l1Apr.unitBasic != null ? l1Apr.basicNet / summary.permit : null;
   approval.area = summary.permit || summary.area;
   approval.sqm = approval.area ? apr.price / approval.area : null;
   approval.sqmVat = approval.area ? apr.priceVat / approval.area : null;
@@ -2258,6 +2273,8 @@ function renderProject(p, vid) {
     const bDev = basicMain != null ? (basicMain - c.P.basic) / c.P.basic : null;
     const cls = d => d == null ? '' : d > S.yellowPct ? 'red' : d > 0 ? 'warn' : 'ok';
     const sign = d => d == null ? '' : (d > 0 ? '+' : '') + fmtPct(d);
+    const AP = v.level === 2 && c.approval.any, ap = c.approval;
+    const aLine = (val, unit, base, extra) => AP ? `<div class="apr-line"><span>✓ מאושר</span><b>${val != null ? fmtNum(val) + ' ₪' : '—'}</b>${extra || ''}${base != null && val != null && Math.abs(base - val) > 0.5 ? `<i>${base > val ? '−' : '+'}${fmtNum(Math.abs(base - val))} ₪${unit || ''}</i>` : ''}</div>` : '';
     const tabs = [['l2', v.level === 2 ? 'רמה 2 – פירוט והשוואה' : 'נתוני רמה 1 והשוואה'], ['l1', 'רמה 1 – סיכום'], ['sum', 'ריכוז עלות למ"ר'], ['checks', `בדיקות והערות ${reds + warns ? `<span class="pill ${reds ? 'red' : 'warn'}">${reds + warns}</span>` : ''}`], ['cmp', 'השוואת גרסאות'], ['src', 'מקור הנתונים']];
     body = `
       <div class="vhead">
@@ -2276,11 +2293,11 @@ function renderProject(p, vid) {
       </div>
       ${statusTrack(v)}
       <div class="kpis ${v.level === 2 && c.approval.any ? 'k5' : ''}">
-        ${PM_ ? `<div class="kpi permit"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר לפי היתר: <strong>${fmtNum(c.summary.pmPermit.priceVat)} ₪</strong> כולל מע"מ · ${fmtNum(c.summary.pmPermit.allPrice)} ₪ ללא מע"מ</small><small class="kpi-area">שטח לפי היתר: <strong>${fmtNum(PM_)} מ"ר</strong></small><small>לפי שטח ראשוני (${fmtNum(c.summary.area)} מ"ר): ${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪ כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
-        : `<div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`}
-        ${PM_ ? `<div class="kpi permit"><span>עלות למ"ר בינוי + פיתוח לפי היתר (ללא מע"מ)</span><b>${fmtNum(c.summary.pmPermit.allPrice)} ₪</b><small>מחירון: ${fmtNum(c.summary.benchPermit.allPrice)} ₪ · ${fmtNum(PM_)} מ"ר לפי היתר</small><small>לפי שטח ראשוני: ${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪ (${fmtNum(c.summary.area)} מ"ר)</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
-        : `<div class="kpi"><span>עלות למ"ר בינוי + פיתוח (ללא מע"מ)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪</b><small>מחירון: ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪ · ${fmtNum(c.summary.area)} מ"ר</small><em class="${cls(sqmDev)}">${sign(sqmDev)}</em></div>`}
-        <div class="kpi ${PM_ ? 'permit' : ''}"><span>עלות מ"ר בסיסי ${PM_ ? 'לפי היתר' : 'נגזרת (רמה 1'}, ללא מע"מ${PM_ ? '' : ')'}</span><b>${basicMain != null ? fmtNum(basicMain) : '—'} ₪</b><small>מחירון: ${fmtNum(c.P.basic)} ₪${PM_ ? ` · ${fmtNum(PM_)} מ"ר לפי היתר` : ` · שטח משוקלל ${fmtNum(c.l1.weighted)} מ"ר`}</small>${PM_ ? `<small>לפי שטח משוקלל (${fmtNum(c.l1.weighted)} מ"ר): ${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} ₪</small>` : ''}<em class="${cls(bDev)}">${sign(bDev)}</em></div>
+        ${PM_ ? `<div class="kpi permit"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר לפי היתר: <strong>${fmtNum(c.summary.pmPermit.priceVat)} ₪</strong> כולל מע"מ · ${fmtNum(c.summary.pmPermit.allPrice)} ₪ ללא מע"מ</small><small class="kpi-area">שטח לפי היתר: <strong>${fmtNum(PM_)} מ"ר</strong></small><small>לפי שטח ראשוני (${fmtNum(c.summary.area)} מ"ר): ${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪ כולל מע"מ</small>${aLine(c.apr.priceVat, '', c.pm.priceVat, `<small>${fmtNum(ap.sqmVat)} ₪ למ"ר לפי היתר כולל מע"מ</small>`)}<em class="${cls(dev)}">${sign(dev)}</em></div>`
+        : `<div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small>${aLine(c.apr.priceVat, '', c.pm.priceVat, `<small>${fmtNum(ap.sqmVat)} ₪ למ"ר כולל מע"מ</small>`)}<em class="${cls(dev)}">${sign(dev)}</em></div>`}
+        ${PM_ ? `<div class="kpi permit"><span>עלות למ"ר בינוי + פיתוח לפי היתר (ללא מע"מ)</span><b>${fmtNum(c.summary.pmPermit.allPrice)} ₪</b><small>מחירון: ${fmtNum(c.summary.benchPermit.allPrice)} ₪ · ${fmtNum(PM_)} מ"ר לפי היתר</small><small>לפי שטח ראשוני: ${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪ (${fmtNum(c.summary.area)} מ"ר)</small>${aLine(ap.sqm, ' למ"ר', c.summary.pmPermit.allPrice)}<em class="${cls(dev)}">${sign(dev)}</em></div>`
+        : `<div class="kpi"><span>עלות למ"ר בינוי + פיתוח (ללא מע"מ)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪</b><small>מחירון: ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪ · ${fmtNum(c.summary.area)} מ"ר</small>${aLine(ap.sqm, ' למ"ר', c.summary.pm ? c.summary.pm.allPrice : null)}<em class="${cls(sqmDev)}">${sign(sqmDev)}</em></div>`}
+        <div class="kpi ${PM_ ? 'permit' : ''}"><span>עלות מ"ר בסיסי ${PM_ ? 'לפי היתר' : 'נגזרת (רמה 1'}, ללא מע"מ${PM_ ? '' : ')'}</span><b>${basicMain != null ? fmtNum(basicMain) : '—'} ₪</b><small>מחירון: ${fmtNum(c.P.basic)} ₪${PM_ ? ` · ${fmtNum(PM_)} מ"ר לפי היתר` : ` · שטח משוקלל ${fmtNum(c.l1.weighted)} מ"ר`}</small>${PM_ ? `<small>לפי שטח משוקלל (${fmtNum(c.l1.weighted)} מ"ר): ${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} ₪</small>` : ''}${aLine(PM_ ? ap.unitBasicPermit : ap.unitBasic, ' למ"ר', basicMain, (PM_ ? ap.unitBasicPermit : ap.unitBasic) != null ? `<small>מול מחירון ${fmtNum(c.P.basic)} ₪: ${sign(((PM_ ? ap.unitBasicPermit : ap.unitBasic) - c.P.basic) / c.P.basic)}</small>` : '')}<em class="${cls(bDev)}">${sign(bDev)}</em></div>
         <div class="kpi"><span>ממצאי בדיקה</span><b><span class="nw"><span class="dot red"></span>${reds} חריגות</span> <span class="nw"><span class="dot warn"></span>${warns} הערות</span></b><small>סוג מבנה: ${esc(typeName(p.buildingTypeId))}</small></div>
         ${v.level === 2 && c.approval.any ? `<div class="kpi apr-kpi"><span>סה"כ מאושר כולל מע"מ</span><b>${fmtNum(c.apr.priceVat)} ₪</b><small class="kpi-sub">למ"ר${PM_ ? ' לפי היתר' : ''}: <strong>${fmtNum(c.approval.sqm)} ₪</strong> ללא מע"מ</small><small>הפחתה: ${fmtNum(c.approval.cut)} ₪ (${fmtPct(c.approval.cutPct || 0)}) ללא מע"מ</small><em class="${c.approval.complete ? 'ok' : 'warn'}">${c.approval.decided}/${c.approval.total}</em></div>` : ''}
       </div>
