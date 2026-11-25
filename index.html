@@ -765,24 +765,24 @@ const KEYWORDS = [
   ['commission', ['עמלת חברה', 'חברה עירונית', 'עמלה']],
   ['control', ['מכון בקרה']],
   ['water', ['מים וביוב', 'אגרות מים', 'אגרת מים', 'ביוב']],
-  ['otherFees', ['אגרות נוספות', 'חח"י', 'חח״י', 'חחי', 'חברת חשמל', 'אגרות חשמל', 'לאגרות']],
+  ['otherFees', ['אגרות נוספות', 'חח"י', 'חח״י', 'חחי', 'חברת חשמל', 'אגרות חשמל', 'לאגרות', 'שילוט']],
   ['govFees', ['פיצוי נופי', 'עתיקות', 'אגרות ממשלתיות']],
   ['planning', ['תכנון', 'ניהול', 'פיקוח']],
   ['demolition', ['הריס']],
   ['pilotis', ['מפולש']],
-  ['sportsHall', ['אולם ספורט', 'היכל ספורט', 'זירת ספורט', 'אולם התעמלות', 'אולם']],
+  ['sportsHall', ['אולם ספורט', 'היכל ספורט', 'זירת ספורט', 'אולם התעמלות']],
   ['balconies', ['מרפס', 'קונזול', 'חצרות']],
   ['comm', ['מחשוב', 'תקשורת']],
   ['trees', ['עצים', 'עצ ']],
   ['yard', ['מתקני חצר', 'מתקני', 'הצלל', 'משחקים']],
   ['roofActive', ['גג פעיל']],
   ['devBasic', ['פיתוח']],
-  ['transformer', ['טרפו', 'טרנספורמ', 'מיתוג', 'השנאה']],
+  ['transformer', ['טרפו', 'טרנספורמ', 'חדר מיתוג', 'מיתוג והשנאה', 'מיתוג/השנאה', 'השנאה', 'שנאי']],
   ['waterReservoir', ['מאגר', 'משאבות']],
   ['infra', ['העתקת תשתיות', 'תשתיות']],
   ['security', ['ביטחון', 'בטחון', 'אבטחה']],
   ['basic', ['בנייה חדשה', 'בניה חדשה', 'בניי חדשה', 'חדשה', 'משרדים', 'מ"ר ראשוני', 'עלות בסיסי', 'עלות מ"ר', 'בינוי', 'מבנה']],
-  ['addMisc', ['ריבוי', 'תוספת', 'מעלית', 'קירות מסך', 'שונות', 'ממ"ד', 'מטבח']],
+  ['addMisc', ['ריבוי', 'תוספת', 'מעלית', 'קירות מסך', 'שונות', 'ממ"ד', 'מטבח', 'אולם מופעים', 'מרכז חוסן', 'הגבהת', 'ביסוס']],
 ];
 
 /* בדיקת חשבון: כמות × מחיר מול סה"כ, עם סבילות לעיגול מחיר היחידה (חצי ₪ ליחידה) */
@@ -795,7 +795,7 @@ function normDesc(s) {
 function guessKey(desc, learned) {
   const n = normDesc(desc);
   if (!n) return '__ignore';
-  if (learned && learned[n]) return learned[n];
+  if (learned && learned[n] && n !== '(ללא תיאור)') return learned[n];
   // שורת מע"מ – רק כשהיא מתחילה במע"מ (ולא סעיף שרק מזכיר "ללא מע"מ" / "כולל מע"מ")
   if (/^(מע"מ|מעמ|מעיימ)/.test(n.replace(/״/g, '"'))) return '__ignore';
   for (const [key, words] of KEYWORDS) {
@@ -1499,7 +1499,7 @@ const Importer = (() => {
   /* ---------- טבלה חופשית ---------- */
   const H = {
     desc: ['פירוט', 'תיאור', 'תאור', 'סעיף', 'פריט'],
-    qty: ['כמות'],
+    qty: ['כמות', 'שטח', 'יחידות', 'כמ"ר'],
     price: ['מחיר ליח', 'מחיר יח', 'מחיר ליחידה', 'מחיר למ"ר', 'מחיר ל-מ"ר', "מחיר ליח'"],
     total: ['סה"כ', 'סה״כ', 'מחיר כולל', 'סכום', 'עלות כוללת', 'עלות'],
     pct: ['אחוז', '%'],
@@ -1532,7 +1532,7 @@ const Importer = (() => {
   function rowsFromGrid(grid) {
     const hd = detectHeader(grid);
     const out = [];
-    let chapter = '';
+    let chapter = '', pendText = '';
     const start = hd ? hd.headerRow + 1 : 0;
     for (let r = start; r < grid.length; r++) {
       const row = grid[r] || [];
@@ -1563,9 +1563,11 @@ const Importer = (() => {
         else if (/^סה"כ|^סה״כ/.test(d0)) chapter = '';
       }
       desc = normDesc(desc);
-      if (!desc && total == null) continue;
-      if (!desc) desc = '(ללא תיאור)';
-      if (total == null && qty == null && price == null && pct == null) continue;
+      const noNums = total == null && qty == null && price == null && pct == null;
+      // שורת טקסט בלבד (תיאור שנשבר לכמה שורות) – נשמרת לשורה המספרית הבאה
+      if (noNums) { if (desc) pendText = (pendText ? pendText + ' ' : '') + desc; if (pendText.length > 160) pendText = pendText.slice(-160); continue; }
+      if (!desc) desc = normDesc(ch) || pendText || '(ללא תיאור)';
+      pendText = '';
       // אחוז שנרשם בעמודת הכמות (למשל בנ"מ 15%)
       if (pct == null && qty != null && qty > 0 && qty <= 1 && price == null) { pct = qty; qty = null; }
       out.push({ id: uid(), desc, qty, price, pct, total, note: note ? String(note).trim() : '', chapter, src: r + 1 });
@@ -2542,7 +2544,7 @@ function renderMapping(p) {
   $('#mapGo').onclick = async () => {
     const un = pd.rows.filter(r => r.key === '__unmapped').length;
     if (un && !confirm(`${un} שורות לא משויכות ולא ייכללו בחישוב. להמשיך?`)) return;
-    pd.rows.forEach(r => { if (r.key !== r.auto && !r.key.startsWith('__unmapped')) S.learned[normDesc(r.desc)] = r.key; });
+    pd.rows.forEach(r => { if (r.key !== r.auto && !r.key.startsWith('__unmapped') && r.desc !== '(ללא תיאור)') S.learned[normDesc(r.desc)] = r.key; });
     const nv = Importer.rowsToVersion(pd.rows, `${{ paste: 'הדבקה', pdf: pd.ocr ? 'PDF (OCR)' : 'PDF' }[pd.source] || 'אקסל'} – ${pd.file}`, pd.source, { type: pd.source, file: pd.file, sheet: pd.sheet });
     if (pd.fileObj) { $('#mapGo').disabled = true; $('#mapGo').textContent = 'שומר את קובץ המקור…'; nv.sourceFile = await Files.put(pd.fileObj); if (pd.page) nv.sourceFile.page = pd.page; if (pd.wb) nv.sourceFile.sheet = pd.sheet; }
     p.versions.push(nv); state.pending = null; Store.save(p.id); Store.save('settings'); state.tab = 'l2';
