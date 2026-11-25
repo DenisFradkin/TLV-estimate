@@ -687,7 +687,7 @@ function defaultPrices() {
 function defaultSettings() {
   return {
     vat: 0.18,
-    commissionVat: true,     // האם מוטל מע"מ על עמלת חברה עירונית (בתבנית – כן)
+    commissionVat: false,    // על עמלת חברה עירונית לא מוטל מע"מ
     yellowPct: 0.05,         // חריגה עד 5% – צהוב
     priceIndex: '04/2026',
     ranges: {
@@ -708,7 +708,7 @@ function defaultSettings() {
 /* מילון שיוך – הסדר חשוב: ספציפי לפני כללי */
 const KEYWORDS = [
   ['__total', ['PRICE', 'price', 'סהייכ לפני', 'לפני מעיימ', 'סהייכ פרויקט', 'סה"כ לפני מע', 'סה״כ לפני מע', 'סהכ לפני מע', 'סה"כ ללא מע', 'סה"כ פרויקט', 'סה״כ פרויקט', 'סהכ פרויקט', '(price)']],
-  ['__ignore', ['סה"כ', 'סה״כ', 'סהכ', 'סה"כ', 'מע"מ', 'מע״מ', 'מעמ', 'מעיימ', 'סהייכ', 'שטח משוקלל', 'האומדן אינו כולל']],
+  ['__ignore', ['סה"כ', 'סה״כ', 'סהכ', 'סה"כ', 'סהייכ', 'שטח משוקלל', 'האומדן אינו כולל']],
   ['bnm', ['בנ"מ', 'בנ״מ', 'בנמ', 'בלצ"מ', 'בלצ״מ', 'בלצמ', 'בלתי נצפ', 'בלתי צפוי']],
   ['commission', ['עמלת חברה', 'חברה עירונית', 'עמלה']],
   ['control', ['מכון בקרה']],
@@ -744,6 +744,8 @@ function guessKey(desc, learned) {
   const n = normDesc(desc);
   if (!n) return '__ignore';
   if (learned && learned[n]) return learned[n];
+  // שורת מע"מ – רק כשהיא מתחילה במע"מ (ולא סעיף שרק מזכיר "ללא מע"מ" / "כולל מע"מ")
+  if (/^(מע"מ|מעמ|מעיימ)/.test(n.replace(/״/g, '"'))) return '__ignore';
   for (const [key, words] of KEYWORDS) {
     for (const w of words) if (n.includes(normDesc(w))) return key;
   }
@@ -1038,8 +1040,19 @@ function calcAll(project, v, settings) {
       note: x.note, overridden: num((v.benchOverride || {})[i.key]) != null,
     };
   });
-  pm.priceVat = rows.reduce((s, r) => s + z(r.pmVat), 0);
-  bench.priceVat = rows.reduce((s, r) => s + z(r.benchVat), 0);
+  // מע"מ לפי פרקים. בנ"מ: מע"מ יחסי לפי הרכב עלות ההקמה (סעיפים פטורים, כמו פיצוי נופי, לא "נושאים" מע"מ בבנ"מ)
+  const vatTotals = (side, t) => {
+    const f = side === 'pm' ? 'pmVat' : 'benchVat';
+    const sumCh = ch => rows.filter(r => r.ch === ch).reduce((s, r) => s + z(r[f]), 0);
+    const o = { building: sumCh('building'), dev: sumCh('dev'), add: sumCh('add'), overhead: sumCh('overhead') };
+    o.direct = o.building + o.dev + o.add; o.setup = o.direct + o.overhead;
+    o.bnm = t.setup ? z(t.bnm) * (o.setup / t.setup) : z(t.bnm) * (1 + S.vat);
+    o.price = o.setup + o.bnm;
+    const br = rows.find(r => r.key === 'bnm'); if (br) br[f] = t.bnm != null ? o.bnm : null;
+    return o;
+  };
+  pm.vat = vatTotals('pm', pm); bench.vat = vatTotals('bench', bench);
+  pm.priceVat = pm.vat.price; bench.priceVat = bench.vat.price;
   const l1 = calcL1(v, P, S, pm);
   const summary = calcSummary(v, pm, bench, S, P);
   if (summary.permit) { summary.pmPermit.priceVat = pm.priceVat / summary.permit; summary.benchPermit.priceVat = bench.priceVat / summary.permit; }
@@ -1106,6 +1119,8 @@ const Store = (() => {
     d.settings.buildingTypes = (s.buildingTypes && s.buildingTypes.length ? s.buildingTypes : def.buildingTypes)
       .map(t => ({ ...t, prices: { ...defaultPrices(), ...(t.prices || {}) } }));
     // החלה חד-פעמית של מחיר ברירת המחדל לאולם ספורט (8,000 ₪ למ"ר) על מחירונים קיימים
+    // החלה חד-פעמית: ללא מע"מ על עמלת חברה עירונית
+    if (!d.settings.commissionVatV1) { d.settings.commissionVat = false; d.settings.commissionVatV1 = true; d._settingsUpgraded = true; }
     if (!d.settings.hallPriceV1) { d.settings.buildingTypes.forEach(t => { if (t.prices.sportsHall == null) t.prices.sportsHall = 8000; }); d.settings.hallPriceV1 = true; d._settingsUpgraded = true; }
     let projects = d.projects || [];
     if (!Array.isArray(projects)) projects = Object.values(projects);
@@ -1573,7 +1588,7 @@ const Exporter = (() => {
     title(w2, 'בדיקת אומדן – רמה 2 (השוואה למחירון)', sub, 14);
     header(w2, 4, ["מס'", 'פירוט', 'כמות', "מחיר ליח' / %", 'סה"כ ללא מע"מ', 'כולל מע"מ', '% מה-PRICE', 'מחירון ללא מע"מ', '% מחירון', '', 'הפרש ₪', 'הפרש %', 'סטטוס', 'הערות']);
     let n = 0, last = null;
-    const sub2 = (k, l) => row(w2, ['', l, '', '', c.pm[k], c.pm[k] * (1 + S.vat), c.pm.price ? c.pm[k] / c.pm.price : null, c.bench[k], c.bench.price ? c.bench[k] / c.bench.price : null, '', c.pm[k] - c.bench[k], c.bench[k] ? (c.pm[k] - c.bench[k]) / c.bench[k] : null, '', ''], [null, null, null, null, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT], { bold: true, fill: LIGHT });
+    const sub2 = (k, l) => row(w2, ['', l, '', '', c.pm[k], (c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * (1 + S.vat)), c.pm.price ? c.pm[k] / c.pm.price : null, c.bench[k], c.bench.price ? c.bench[k] / c.bench.price : null, '', c.pm[k] - c.bench[k], c.bench[k] ? (c.pm[k] - c.bench[k]) / c.bench[k] : null, '', ''], [null, null, null, null, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT], { bold: true, fill: LIGHT });
     const after = { comm: [['building', 'סה"כ פרק בניה']], devMisc: [['dev', 'סה"כ פרק פיתוח']], addMisc: [['add', 'סה"כ פרק תוספות וחריגים'], ['direct', 'סה"כ עלויות בניה ישירות (COST)']], commission: [['overhead', 'סה"כ תקורות/העמסות'], ['setup', 'סה"כ עלות הקמה']] };
     c.rows.forEach(r => {
       if (r.hidden) { (after[r.key] || []).forEach(([k, l]) => sub2(k, l)); return; }
@@ -2437,7 +2452,7 @@ function renderL2Tab(v, c, S) {
   if (v.level === 1) return renderL1Inputs(v, c, S);
   let n = 0;
   const vat = 1 + S.vat;
-  const sub = (k, label, cls = '') => `<tr class="subtotal ${cls}"><td></td><td>${label}</td><td></td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.pm[k] * vat)}</td><td class="num">${fmtPct(c.pm.price ? c.pm[k] / c.pm.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtPct(c.bench.price ? c.bench[k] / c.bench.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td><span class="dot ${statusOf(c.pm[k], c.bench[k], S)}"></span></td><td></td></tr>`;
+  const sub = (k, label, cls = '') => `<tr class="subtotal ${cls}"><td></td><td>${label}</td><td></td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * vat)}</td><td class="num">${fmtPct(c.pm.price ? c.pm[k] / c.pm.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtPct(c.bench.price ? c.bench[k] / c.bench.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td><span class="dot ${statusOf(c.pm[k], c.bench[k], S)}"></span></td><td></td></tr>`;
   let body = '', lastCh = null;
   c.rows.forEach(r => {
     const it = ITEM[r.key], x = v.items[r.key];
