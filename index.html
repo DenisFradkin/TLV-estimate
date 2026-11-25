@@ -2225,6 +2225,20 @@ function newProjectDialog() {
 /* ---------- דף פרויקט ---------- */
 function curVersion(p, vid) { return p.versions.find(v => v.id === vid) || latest(p); }
 
+/* רינדור מחדש בלי לקפוץ: שומר גלילת חלון + גלילת הטבלה (אנכית ואופקית) */
+function rerenderKeep(p, v) {
+  const tw = $('#tabBody .table-wrap'), y = window.scrollY, t = tw ? tw.scrollTop : 0, l = tw ? tw.scrollLeft : 0;
+  renderProject(p, v.id);
+  const tw2 = $('#tabBody .table-wrap'); if (tw2) { tw2.scrollTop = t; tw2.scrollLeft = l; }
+  window.scrollTo(0, y);
+}
+function keepScroll(fn) {
+  const tw = $('#tabBody .table-wrap'), y = window.scrollY, t = tw ? tw.scrollTop : 0, l = tw ? tw.scrollLeft : 0;
+  fn();
+  const tw2 = $('#tabBody .table-wrap'); if (tw2) { tw2.scrollTop = t; tw2.scrollLeft = l; }
+  window.scrollTo(0, y);
+}
+
 function renderProject(p, vid) {
   const S = Store.get().settings;
   const v = curVersion(p, vid);
@@ -2300,7 +2314,7 @@ function renderProject(p, vid) {
   $('#delV').onclick = () => { if (confirm('למחוק את הגרסה?')) { p.versions = p.versions.filter(x => x.id !== v.id); if (v.sourceFile && !p.versions.some(x => x.sourceFile && x.sourceFile.id === v.sourceFile.id)) Files.remove(v.sourceFile); Store.save(p.id); location.hash = '#/p/' + p.id; } };
   $('#xlsV').onclick = () => Exporter.toExcel(p, v);
   if ($('#srcV')) $('#srcV').onclick = () => openSource(p, v);
-  $$('.src-toggle').forEach(b => b.onclick = () => { const k = b.dataset.src; state.expanded.has(k) ? state.expanded.delete(k) : state.expanded.add(k); const y = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y); });
+  $$('.src-toggle').forEach(b => b.onclick = () => { const k = b.dataset.src; state.expanded.has(k) ? state.expanded.delete(k) : state.expanded.add(k); rerenderKeep(p, v); });
   if ($('#srcV2')) $('#srcV2').onclick = () => openSource(p, v);
   $$('.tabs button').forEach(b => b.onclick = () => { state.tab = b.dataset.tab; renderProject(p, v.id); });
   bindTab(p, v);
@@ -2767,7 +2781,7 @@ function bindTab(p, v) {
     el.addEventListener('change', () => {
       const path = el.dataset.path;
       let val;
-      if (el.type === 'checkbox') { setPath(v, path, el.checked); Store.save(p.id); const y0 = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y0); return; }
+      if (el.type === 'checkbox') { setPath(v, path, el.checked); Store.save(p.id); rerenderKeep(p, v); return; }
       if (path.startsWith('reviewNotes') || path === 'generalNotes') val = el.value;
       else if (el.dataset.pct) val = Importer.parsePct(el.value.includes('%') || !el.value ? el.value : el.value + '%');
       else val = Importer.parseNum(el.value);
@@ -2782,11 +2796,14 @@ function bindTab(p, v) {
       if (path === 'l1.bnmPct' && val != null && val > 1) setPath(v, path, val / 100);
       Store.save(p.id);
       if (path === 'generalNotes' || path.startsWith('reviewNotes')) return;
-      const y = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y);
+      rerenderKeep(p, v);
     });
   });
-  const rerender = () => { Store.save(p.id); const y = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y); };
-  $$('#tabBody [data-dec]').forEach(b => b.onclick = () => { setDecision(p, v, b.dataset.dec, b.dataset.s); rerender(); });
+  const rerender = () => { Store.save(p.id); rerenderKeep(p, v); };
+  $$('#tabBody [data-dec]').forEach(b => b.onclick = () => {
+    const k = b.dataset.dec; setDecision(p, v, k, b.dataset.s); rerender();
+    const inp = $(`#tabBody input[data-path="approval.${k}.amt"]`); if (inp) { inp.focus({ preventScroll: true }); inp.select(); }
+  });
   if ($('#aprGreen')) $('#aprGreen').onclick = () => {
     const c = calcAll(p, v, Store.get().settings); const A = v.approval = v.approval || {}; let n = 0;
     c.rows.forEach(r => { if (r.needs && !r.auto && !r.dec && r.status === 'ok') { A[r.key] = { s: 'ok', amt: null }; n++; } });
@@ -2922,7 +2939,7 @@ function renderPrint(p, vid) {
   Store.onRemote(() => {
     const a = document.activeElement;
     if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT') || !$('#modal').classList.contains('hidden')) { toast('עודכנו נתונים ממשתמש אחר'); return; }
-    const y = window.scrollY; route(); window.scrollTo(0, y);
+    keepScroll(route);
   });
   route();
 })();
