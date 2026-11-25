@@ -1,5 +1,5 @@
-<!doctype html>
 <!-- בקרת אומדנים. הגדרות Firebase: חפש FIREBASE_CONFIG -->
+<!doctype html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
@@ -512,6 +512,46 @@ ul.attn li a:hover { filter: brightness(.97); }
 @media (max-width: 720px) { .dash-kpis { grid-template-columns: 1fr 1fr; } .filters select { flex: 1 1 45%; min-width: 0; } .bar-row { grid-template-columns: 38% 1fr 58px; font-size: 13px; } .track .step { min-width: 80px; } }
 @media print { .track { display: none; } }
 
+/* ===================== החלטות בודק ===================== */
+.kpis.k5 { grid-template-columns: repeat(5, 1fr); }
+@media (max-width: 1180px) { .kpis.k5 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 720px) { .kpis.k5 { grid-template-columns: 1fr; } }
+.kpi.apr-kpi { border: 2px solid #548235; background: #f3f9ee; }
+.apr-bar { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 12px; align-items: center; margin: 12px 16px; padding: 12px 16px; border: 1px solid #c9b46a; border-radius: 12px; background: #fffbea; text-align: center; }
+.apr-bar span { display: block; font-size: 15px; color: #555; }
+.apr-bar span span { display: inline; }
+.apr-bar b { font-size: 22px; } .apr-bar small { display: block; font-size: 14px; color: #666; }
+.apr-prog .pbar { height: 9px; background: #eee3bd; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+.apr-prog .pbar i { display: block; height: 100%; background: #548235; border-radius: 99px; transition: width .3s; }
+.apr-prog b { font-size: 17px; }
+.apr-act { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 1180px) { .apr-bar { grid-template-columns: 1fr 1fr; } .apr-prog, .apr-act { grid-column: 1 / -1; } .apr-act { flex-direction: row; justify-content: center; } }
+.grid th.grp-dec { background: #548235 !important; color: #fff !important; }
+.dec-cell { white-space: nowrap; min-width: 118px; }
+.decs { display: inline-flex; gap: 3px; }
+.db { font-family: var(--font); font-size: 16px; font-weight: 700; width: 30px; height: 28px; border-radius: 7px; border: 1px solid #c8c8c8; background: #fff; color: #999; cursor: pointer; line-height: 1; padding: 0; }
+.db:hover { border-color: #888; color: #333; }
+.db-ok.on { background: #548235; border-color: #548235; color: #fff; }
+.db-no.on { background: #c00000; border-color: #c00000; color: #fff; }
+.db-part.on { background: #bf9000; border-color: #bf9000; color: #fff; }
+.dec-lbl { display: block; font-size: 12.5px; color: #8a8a8a; margin-top: 2px; }
+.dec-lbl.auto { color: #4472c4; }
+tr.dec-ok .dec-lbl { color: #548235; font-weight: 700; }
+tr.dec-no .dec-lbl { color: #c00000; font-weight: 700; }
+tr.dec-part .dec-lbl, tr.dec-partial .dec-lbl { color: #9c6f00; font-weight: 700; }
+.grid tr.dec-no > td:not(.bsep):not(.dec-cell):not(.apr-cell) { opacity: .55; }
+.grid tr.dec-no td.desc { text-decoration: line-through; }
+.grid tr.dec-ok > td:first-child { box-shadow: inset -4px 0 0 #548235; }
+.grid tr.dec-no > td:first-child { box-shadow: inset -4px 0 0 #c00000; }
+.grid tr.dec-part > td:first-child, .grid tr.dec-partial > td:first-child { box-shadow: inset -4px 0 0 #bf9000; }
+.apr-cell { font-weight: 700; min-width: 120px; }
+.apr-cell.cut { color: #c00000; }
+.apr-cell .cut-amt { display: block; font-size: 12.5px; font-weight: 400; color: #c00000; }
+input.cell.apr-in { border: 2px solid #bf9000 !important; background: #fffbea; font-weight: 700; }
+.grid tr.src-row .db { width: 26px; height: 24px; font-size: 14px; }
+.r-apr div { background: #f3f9ee !important; border-color: #a9d08e !important; }
+.r-kpis.r-apr { grid-template-columns: repeat(5, 1fr); }
+
 </style>
 </head>
 <body>
@@ -998,6 +1038,10 @@ function calcChecks(v, pm, bench, S, P, l1) {
   return out;
 }
 
+const srcTotal = sr => sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null);
+const i_isPct = k => ITEM[k] && ITEM[k].kind === 'pct';
+const DEC_LABEL = { ok: 'מאושר', no: 'לא מאושר', part: 'מאושר בתיקון', partial: 'מאושר חלקית' };
+
 function calcAll(project, v, settings) {
   const P = priceListFor(project, settings), S = settings;
   let vv = v;
@@ -1022,6 +1066,7 @@ function calcAll(project, v, settings) {
   }
   const pm = pmTotals(vv, S);
   const bench = benchTotals(vv, P, pm);
+  const allSrc = ((v.importInfo && v.importInfo.rows) || []).map((r, idx) => ({ ...r, idx }));
   const rows = ITEMS.map(i => {
     const x = vv.items[i.key];
     const p = pm[i.key], q = bench[i.key];
@@ -1035,14 +1080,51 @@ function calcAll(project, v, settings) {
       bench: q, benchVat: vatOf(i.key, q, S), benchUnit: bench._unit[i.key] ?? null, benchShare: bench.price ? q / bench.price : null,
       diff: z(p) - z(q), diffPct: q ? (z(p) - q) / q : null,
       status: ((['trees', 'yard', 'roofActive', 'devMisc', 'transformer', 'waterReservoir', 'infra', 'security'].includes(i.key) || (i.key === 'sportsHall' && num(P.sportsHall) == null)) && num((v.benchOverride || {})[i.key]) == null) ? 'same' : statusOf(p, q, S),
-      sources: ((v.importInfo && v.importInfo.rows) || []).filter(r => r.key === i.key),
+      sources: allSrc.filter(r => r.key === i.key),
       hidden: !!i.optional && !z(p) && !z(v.areas[i.areaField]) && !z(x.qty),
       note: x.note, overridden: num((v.benchOverride || {})[i.key]) != null,
     };
   });
+  /* ---- החלטות בודק: אישור / דחייה / אישור בתיקון לכל סעיף ושורת פירוט ---- */
+  const A = (v.level === 2 && v.approval) || {};
+  rows.forEach(r => {
+    const d = A[r.key] || {};
+    let red = 0, subDec = 0;
+    const multi = r.sources.length > 1;
+    r.sources.forEach(sr => {
+      const sd = multi ? A['s' + sr.idx] : null, t = z(srcTotal(sr));
+      sr.dec = sd ? sd.s : null; sr.decAmt = sd ? num(sd.amt) : null;
+      sr.apr = !sd ? t : sd.s === 'no' ? 0 : sd.s === 'part' ? (num(sd.amt) ?? t) : t;
+      if (!sd) return;
+      subDec++; red += t - sr.apr;
+    });
+    r.red = red; r.decAmt = num(d.amt); r.auto = i_isPct(r.key);
+    r.dec = (d.s === 'no' || d.s === 'part') ? d.s : Math.abs(red) > 0.5 ? 'partial' : d.s === 'ok' ? 'ok' : (multi && subDec === r.sources.length) ? 'ok' : null;
+    r.needs = v.level === 2 && !r.hidden && z(r.pm) !== 0;
+  });
+  const vA = { ...vv, items: JSON.parse(JSON.stringify(vv.items)) };
+  rows.forEach(r => {
+    const x = vA.items[r.key], p = pm[r.key];
+    if (p == null) return;
+    const fixed = r.dec === 'no' ? 0 : r.dec === 'part' ? (r.decAmt ?? p) : null;
+    if (r.auto && pm._bases[r.key]) {
+      if (fixed != null) x.total = fixed;
+      else { x.total = null; x.pct = (p - r.red) / pm._bases[r.key]; }   // סעיף באחוזים – מתעדכן לפי הבסיס המאושר
+    } else x.total = fixed != null ? fixed : p - r.red;
+  });
+  const apr = pmTotals(vA, S);
+  rows.forEach(r => { r.apr = apr[r.key]; r.aprVat = vatOf(r.key, r.apr, S); });
+  const need = rows.filter(r => r.needs && !(r.auto && !r.dec));
+  const approval = {
+    total: need.length, decided: need.filter(r => r.dec).length,
+    any: rows.some(r => r.dec) , cut: pm.price - apr.price,
+  };
+  approval.pending = approval.total - approval.decided;
+  approval.complete = approval.total > 0 && approval.pending === 0;
+
   // מע"מ לפי פרקים. בנ"מ: מע"מ יחסי לפי הרכב עלות ההקמה (סעיפים פטורים, כמו פיצוי נופי, לא "נושאים" מע"מ בבנ"מ)
   const vatTotals = (side, t) => {
-    const f = side === 'pm' ? 'pmVat' : 'benchVat';
+    const f = side + 'Vat';
     const sumCh = ch => rows.filter(r => r.ch === ch).reduce((s, r) => s + z(r[f]), 0);
     const o = { building: sumCh('building'), dev: sumCh('dev'), add: sumCh('add'), overhead: sumCh('overhead') };
     o.direct = o.building + o.dev + o.add; o.setup = o.direct + o.overhead;
@@ -1052,13 +1134,19 @@ function calcAll(project, v, settings) {
     return o;
   };
   pm.vat = vatTotals('pm', pm); bench.vat = vatTotals('bench', bench);
-  pm.priceVat = pm.vat.price; bench.priceVat = bench.vat.price;
+  apr.vat = vatTotals('apr', apr);
+  pm.priceVat = pm.vat.price; bench.priceVat = bench.vat.price; apr.priceVat = apr.vat.price;
+  approval.cutVat = pm.priceVat - apr.priceVat;
+  approval.cutPct = pm.price ? approval.cut / pm.price : null;
   const l1 = calcL1(v, P, S, pm);
   const summary = calcSummary(v, pm, bench, S, P);
   if (summary.permit) { summary.pmPermit.priceVat = pm.priceVat / summary.permit; summary.benchPermit.priceVat = bench.priceVat / summary.permit; }
   l1.unitBasicPermit = summary.permit && l1.unitBasic != null ? l1.basicNet / summary.permit : null;
   const checks = calcChecks(v, pm, bench, S, P, l1);
-  return { P, pm, bench, rows, l1, summary, checks };
+  approval.area = summary.permit || summary.area;
+  approval.sqm = approval.area ? apr.price / approval.area : null;
+  approval.sqmVat = approval.area ? apr.priceVat / approval.area : null;
+  return { P, pm, bench, apr, approval, rows, l1, summary, checks };
 }
 
 /* ---- עיצוב מספרים ---- */
@@ -1547,6 +1635,7 @@ const Importer = (() => {
 const Exporter = (() => {
   const NAVY = 'FF262626', GOLD = 'FFFFC000', GOLD2 = 'FFFFE699', LIGHT = 'FFFFF2CC', YELLOW = 'FFFFFF00', BLUE = 'FFDDEBF7', GRAY = 'FFD9D9D9', RED = 'FFFF0000', GREEN = 'FF00B050';
   const FILL = { ok: 'FFD8F0E2', warn: 'FFFFF0C2', red: 'FFF8D3CF' };
+  const DEC_FILL = { ok: 'FFD8F0E2', no: 'FFF8D3CF', part: 'FFFFF0C2', partial: 'FFFFF0C2' };
   const bl = { style: 'thin', color: { argb: 'FF000000' } };
   const border = { top: bl, bottom: bl, left: bl, right: bl };
   const NUM = '#,##0;[Red]-#,##0', PCT = '0.0%';
@@ -1584,25 +1673,27 @@ const Exporter = (() => {
     const sub = `${p.name} · ${v.label} · מנהל פרויקט: ${p.pm || '—'} · ${typeName(p.buildingTypeId)} · סטטוס: ${v.status} · ${new Date().toLocaleDateString('he-IL')}`;
 
     /* רמה 2 */
-    const w2 = sheet(wb, 'רמה 2 - השוואה', [6, 42, 10, 12, 15, 15, 9, 15, 9, 1.5, 14, 9, 12, 36]);
-    title(w2, 'בדיקת אומדן – רמה 2 (השוואה למחירון)', sub, 14);
-    header(w2, 4, ["מס'", 'פירוט', 'כמות', "מחיר ליח' / %", 'סה"כ ללא מע"מ', 'כולל מע"מ', '% מה-PRICE', 'מחירון ללא מע"מ', '% מחירון', '', 'הפרש ₪', 'הפרש %', 'סטטוס', 'הערות']);
+    const w2 = sheet(wb, 'רמה 2 - השוואה', [6, 42, 10, 12, 15, 15, 9, 15, 9, 1.5, 14, 9, 12, 14, 15, 36]);
+    title(w2, 'בדיקת אומדן – רמה 2 (השוואה למחירון)', sub, 16);
+    header(w2, 4, ["מס'", 'פירוט', 'כמות', "מחיר ליח' / %", 'סה"כ ללא מע"מ', 'כולל מע"מ', '% מה-PRICE', 'מחירון ללא מע"מ', '% מחירון', '', 'הפרש ₪', 'הפרש %', 'סטטוס', 'החלטת בודק', 'סכום מאושר ללא מע"מ', 'נימוק / הערות']);
     let n = 0, last = null;
-    const sub2 = (k, l) => row(w2, ['', l, '', '', c.pm[k], (c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * (1 + S.vat)), c.pm.price ? c.pm[k] / c.pm.price : null, c.bench[k], c.bench.price ? c.bench[k] / c.bench.price : null, '', c.pm[k] - c.bench[k], c.bench[k] ? (c.pm[k] - c.bench[k]) / c.bench[k] : null, '', ''], [null, null, null, null, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT], { bold: true, fill: LIGHT });
+    const sub2 = (k, l) => row(w2, ['', l, '', '', c.pm[k], (c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * (1 + S.vat)), c.pm.price ? c.pm[k] / c.pm.price : null, c.bench[k], c.bench.price ? c.bench[k] / c.bench.price : null, '', c.pm[k] - c.bench[k], c.bench[k] ? (c.pm[k] - c.bench[k]) / c.bench[k] : null, '', '', c.apr[k], ''], [null, null, null, null, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT, null, null, NUM], { bold: true, fill: LIGHT });
     const after = { comm: [['building', 'סה"כ פרק בניה']], devMisc: [['dev', 'סה"כ פרק פיתוח']], addMisc: [['add', 'סה"כ פרק תוספות וחריגים'], ['direct', 'סה"כ עלויות בניה ישירות (COST)']], commission: [['overhead', 'סה"כ תקורות/העמסות'], ['setup', 'סה"כ עלות הקמה']] };
     c.rows.forEach(r => {
       if (r.hidden) { (after[r.key] || []).forEach(([k, l]) => sub2(k, l)); return; }
-      if (r.ch !== last) { const cr = row(w2, ['', CHAPTERS.find(x => x.id === r.ch).label, '', '', '', '', '', '', '', '', '', '', '', ''], null, { bold: true, fill: GOLD2 }); last = r.ch; }
+      if (r.ch !== last) { const cr = row(w2, ['', CHAPTERS.find(x => x.id === r.ch).label, '', '', '', '', '', '', '', '', '', '', '', '', '', ''], null, { bold: true, fill: GOLD2 }); last = r.ch; }
       n++;
       const unit = r.kind === 'pct' ? r.pmUnit : r.pmUnit;
       const note = [(v.reviewNotes || {})[r.key], v.items[r.key].note && ('מנה"פ: ' + v.items[r.key].note)].filter(Boolean).join(' | ');
-      const rr = row(w2, [n, r.label, r.qty, unit, r.pm, r.pmVat, r.pmShare, r.bench, r.benchShare, '', r.status === 'same' ? null : r.diff, r.status === 'same' ? null : r.diffPct, ST_LABEL[r.status] || '', note],
-        [null, null, '#,##0', r.kind === 'pct' ? '0.00%' : NUM, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT]);
+      const rr = row(w2, [n, r.label, r.qty, unit, r.pm, r.pmVat, r.pmShare, r.bench, r.benchShare, '', r.status === 'same' ? null : r.diff, r.status === 'same' ? null : r.diffPct, ST_LABEL[r.status] || '', r.dec ? DEC_LABEL[r.dec] : (r.auto ? 'אוטומטי' : 'לבירור'), r.apr, note],
+        [null, null, '#,##0', r.kind === 'pct' ? '0.00%' : NUM, NUM, NUM, PCT, NUM, PCT, null, NUM, PCT, null, null, NUM]);
+      if (r.dec) rr.getCell(14).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DEC_FILL[r.dec] } };
+      if (r.apr != null && r.pm != null && r.apr < r.pm - 0.5) rr.getCell(15).font = { bold: true, color: { argb: RED } };
       rr.getCell(3).font = { bold: true, color: { argb: RED } };
-      rr.getCell(14).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+      rr.getCell(16).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
       if (FILL[r.status]) rr.getCell(13).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL[r.status] } };
       if (r.sources.length > 1) r.sources.forEach(sr => {
-        const sx = row(w2, ['', sr.desc, sr.qty, sr.price, sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null), '', '', '', '', '', '', '', '', 'שורה ' + sr.src + ' במקור'], [null, null, '#,##0', NUM, NUM]);
+        const sx = row(w2, ['', sr.desc, sr.qty, sr.price, srcTotal(sr), '', '', '', '', '', '', '', '', sr.dec ? DEC_LABEL[sr.dec] : '', sr.apr, [(v.reviewNotes || {})['s' + sr.idx], 'שורה ' + sr.src + ' במקור'].filter(Boolean).join(' | ')], [null, null, '#,##0', NUM, NUM, null, null, null, null, null, null, null, null, null, NUM]);
         sx.eachCell({ includeEmpty: true }, cc => { cc.font = { color: { argb: 'FF404040' }, size: 11 }; cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F5EF' } }; });
       });
       (after[r.key] || []).forEach(([k, l]) => sub2(k, l));
@@ -1611,6 +1702,13 @@ const Exporter = (() => {
     // עמודת הפרדה בין המחירון להשוואה
     for (let i = 4; i <= w2.lastRow.number; i++) w2.getCell(i, 10).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
     w2.addRow([]);
+    if (c.approval.any) {
+      row(w2, ['', 'סה"כ מאושר ללא מע"מ', '', '', c.apr.price], [null, null, null, null, NUM], { bold: true });
+      row(w2, ['', 'סה"כ מאושר כולל מע"מ', '', '', c.apr.priceVat], [null, null, null, null, NUM], { bold: true });
+      row(w2, ['', 'הפחתה מהאומדן ללא מע"מ', '', '', c.approval.cut, c.approval.cutPct], [null, null, null, null, NUM, PCT], { bold: true });
+      row(w2, ['', 'סעיפים שנבדקו', '', '', `${c.approval.decided} / ${c.approval.total}`], null);
+      w2.addRow([]);
+    }
     row(w2, ['', 'שטחים'], null, { bold: true });
     AREA_FIELDS.forEach(f => row(w2, ['', f.label, v.areas[f.key]], [null, null, '#,##0']));
     if (v.declaredTotal != null) row(w2, ['', 'סה"כ מוצהר ע"י מנהל הפרויקט', v.declaredTotal], [null, null, NUM]);
@@ -1643,6 +1741,16 @@ const Exporter = (() => {
     row(ws, ['יחס שטח פיתוח לשטח בניה', s.ratio], [null, '0.00']);
     if (s.pm) [['עלות למ"ר בינוי + פיתוח', 'allPrice', 'allCost'], ['עלות פיתוח המועמסת על 1 מ"ר בניה', 'dev', 'dev'], ['עלות למ"ר בינוי בסיסי', 'basicPrice', 'basicCost'], ['עלות למ"ר בינוי בסיסי כולל בנ"מ', 'basicPriceBnm', 'basicCostBnm']]
       .forEach(([l, a, b]) => row(ws, [l, s.pm[a], s.pm[a] * vt, s.pm[b], s.pm[b] * vt, s.bench[a], s.bench[a] * vt, s.bench[b], s.bench[b] * vt], [null, NUM, NUM, NUM, NUM, NUM, NUM, NUM, NUM]));
+
+    /* סעיפים שלא אושרו */
+    const L = rejectedList(v, c);
+    if (L.length) {
+      const wr = sheet(wb, 'סעיפים שלא אושרו', [46, 16, 16, 16, 16, 60]);
+      title(wr, 'סעיפים שלא אושרו / אושרו בתיקון', sub, 6);
+      header(wr, 4, ['סעיף', 'אומדן ללא מע"מ', 'מאושר ללא מע"מ', 'הפחתה', 'החלטה', 'נימוק']);
+      L.forEach(x => { const r = row(wr, [x.label, x.pm, x.apr, x.pm - x.apr, x.dec, x.note || ''], [null, NUM, NUM, NUM]); r.getCell(4).font = { bold: true, color: { argb: RED } }; if (x.sub) r.eachCell({ includeEmpty: true }, cc => cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F5EF' } }); });
+      row(wr, ['סה"כ הפחתה (כולל השפעה על סעיפים באחוזים)', c.pm.price, c.apr.price, c.approval.cut, '', ''], [null, NUM, NUM, NUM], { bold: true, fill: GRAY });
+    }
 
     /* בדיקות */
     const wc = sheet(wb, 'בדיקות והערות', [12, 34, 90]);
@@ -2032,6 +2140,7 @@ function renderHome() {
       <td class="num" data-label="סה&quot;כ אומדן ₪">${c ? fmtNum(c.pm.price) : ''}</td>
       <td class="num" data-label="סה&quot;כ מחירון ₪">${c ? fmtNum(c.bench.price) : ''}</td>
       <td class="num" data-label="סטייה">${x.dev != null ? `<span class="pill ${cls(x.dev)}">${sign(x.dev)}</span>` : ''}</td>
+      <td class="num" data-label="סה&quot;כ מאושר ₪">${c && c.approval.any ? `${fmtNum(c.apr.price)}${c.approval.cut > 0.5 ? `<div class="small red-t">−${fmtPct(c.approval.cutPct)}</div>` : ''}${c.approval.pending ? `<div class="small muted">${c.approval.pending} לבירור</div>` : ''}` : ''}</td>
       <td class="num" data-label="₪ למ&quot;ר">${x.sqm ? fmtNum(x.sqm) + (x.byPermit ? ' <span class="tag" title="לפי שטח היתר">היתר</span>' : '') : ''}</td>
       <td data-label="חריגות">${c ? `<span class="pill ${x.reds.length ? 'red' : 'ok'}">${x.reds.length}</span>` : ''}</td>
       <td data-label="סטטוס">${v ? `<span class="status s-${STATUSES.indexOf(v.status)}">${esc(v.status)}</span>` : ''}</td>
@@ -2069,8 +2178,8 @@ function renderHome() {
       </div>
       <h2 class="sec-title">כל הפרויקטים${filtered ? ` <small class="muted">(${list.length} מתוך ${all.length})</small>` : ''}</h2>
       <div class="card flush"><table class="grid home-table">
-        <thead><tr><th>פרויקט</th><th>סוג מבנה</th><th>מנהל פרויקט</th><th>גרסה אחרונה</th><th class="num">סה"כ אומדן ₪</th><th class="num">סה"כ מחירון ₪</th><th class="num">סטייה</th><th class="num">₪ למ"ר (ללא מע"מ)</th><th>חריגות</th><th>סטטוס</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="10" class="muted">אין פרויקטים שמתאימים לסינון</td></tr>'}</tbody></table></div>` : `
+        <thead><tr><th>פרויקט</th><th>סוג מבנה</th><th>מנהל פרויקט</th><th>גרסה אחרונה</th><th class="num">סה"כ אומדן ₪</th><th class="num">סה"כ מחירון ₪</th><th class="num">סטייה</th><th class="num">סה"כ מאושר ₪</th><th class="num">₪ למ"ר (ללא מע"מ)</th><th>חריגות</th><th>סטטוס</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="11" class="muted">אין פרויקטים שמתאימים לסינון</td></tr>'}</tbody></table></div>` : `
       <div class="empty card">
         <h2>עוד אין פרויקטים</h2>
         <p>צור פרויקט, ואז ייבא את קובץ האקסל או ה-PDF של מנהל הפרויקט, הדבק טבלה או הקלד את האומדן ידנית.</p>
@@ -2152,13 +2261,14 @@ function renderProject(p, vid) {
         </div>
       </div>
       ${statusTrack(v)}
-      <div class="kpis">
+      <div class="kpis ${v.level === 2 && c.approval.any ? 'k5' : ''}">
         ${PM_ ? `<div class="kpi permit"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר לפי היתר: <strong>${fmtNum(c.summary.pmPermit.priceVat)} ₪</strong> כולל מע"מ · ${fmtNum(c.summary.pmPermit.allPrice)} ₪ ללא מע"מ</small><small class="kpi-area">שטח לפי היתר: <strong>${fmtNum(PM_)} מ"ר</strong></small><small>לפי שטח ראשוני (${fmtNum(c.summary.area)} מ"ר): ${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪ כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
         : `<div class="kpi"><span>סה"כ פרויקט כולל מע"מ</span><b>${fmtNum(c.pm.priceVat)} ₪</b><small class="kpi-sub">PRICE למ"ר: <strong>${c.summary.area ? fmtNum(c.pm.priceVat / c.summary.area) : '—'} ₪</strong> כולל מע"מ · ${c.summary.area ? fmtNum(c.pm.price / c.summary.area) : '—'} ₪ ללא מע"מ</small><small>מחירון: ${fmtNum(c.bench.priceVat)} ₪ · ${c.summary.area ? fmtNum(c.bench.priceVat / c.summary.area) : '—'} ₪ למ"ר כולל מע"מ</small><em class="${cls(dev)}">${sign(dev)}</em></div>`}
         ${PM_ ? `<div class="kpi permit"><span>עלות למ"ר בינוי + פיתוח לפי היתר (ללא מע"מ)</span><b>${fmtNum(c.summary.pmPermit.allPrice)} ₪</b><small>מחירון: ${fmtNum(c.summary.benchPermit.allPrice)} ₪ · ${fmtNum(PM_)} מ"ר לפי היתר</small><small>לפי שטח ראשוני: ${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪ (${fmtNum(c.summary.area)} מ"ר)</small><em class="${cls(dev)}">${sign(dev)}</em></div>`
         : `<div class="kpi"><span>עלות למ"ר בינוי + פיתוח (ללא מע"מ)</span><b>${c.summary.pm ? fmtNum(c.summary.pm.allPrice) : '—'} ₪</b><small>מחירון: ${c.summary.bench ? fmtNum(c.summary.bench.allPrice) : '—'} ₪ · ${fmtNum(c.summary.area)} מ"ר</small><em class="${cls(sqmDev)}">${sign(sqmDev)}</em></div>`}
         <div class="kpi ${PM_ ? 'permit' : ''}"><span>עלות מ"ר בסיסי ${PM_ ? 'לפי היתר' : 'נגזרת (רמה 1'}, ללא מע"מ${PM_ ? '' : ')'}</span><b>${basicMain != null ? fmtNum(basicMain) : '—'} ₪</b><small>מחירון: ${fmtNum(c.P.basic)} ₪${PM_ ? ` · ${fmtNum(PM_)} מ"ר לפי היתר` : ` · שטח משוקלל ${fmtNum(c.l1.weighted)} מ"ר`}</small>${PM_ ? `<small>לפי שטח משוקלל (${fmtNum(c.l1.weighted)} מ"ר): ${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} ₪</small>` : ''}<em class="${cls(bDev)}">${sign(bDev)}</em></div>
         <div class="kpi"><span>ממצאי בדיקה</span><b><span class="nw"><span class="dot red"></span>${reds} חריגות</span> <span class="nw"><span class="dot warn"></span>${warns} הערות</span></b><small>סוג מבנה: ${esc(typeName(p.buildingTypeId))}</small></div>
+        ${v.level === 2 && c.approval.any ? `<div class="kpi apr-kpi"><span>סה"כ מאושר כולל מע"מ</span><b>${fmtNum(c.apr.priceVat)} ₪</b><small class="kpi-sub">למ"ר${PM_ ? ' לפי היתר' : ''}: <strong>${fmtNum(c.approval.sqm)} ₪</strong> ללא מע"מ</small><small>הפחתה: ${fmtNum(c.approval.cut)} ₪ (${fmtPct(c.approval.cutPct || 0)}) ללא מע"מ</small><em class="${c.approval.complete ? 'ok' : 'warn'}">${c.approval.decided}/${c.approval.total}</em></div>` : ''}
       </div>
       <div class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${state.tab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
       <div class="card flush" id="tabBody">${renderTab(p, v, c, S)}</div>`;
@@ -2448,16 +2558,59 @@ function areasBlock(v, c) {
 
 const SUBTOTAL_AFTER = { comm: ['building', 'סה"כ פרק בניה'], devMisc: ['dev', 'סה"כ פרק פיתוח'], addMisc: ['add', 'סה"כ פרק תוספות וחריגים', ['direct', 'סה"כ עלויות בניה ישירות (COST)']], commission: ['overhead', 'סה"כ תקורות / העמסות', ['setup', 'סה"כ עלות הקמה (ישירות + תקורות)']], bnm: null };
 
+/* ---------- החלטות בודק ---------- */
+function decButtons(k, dec, auto) {
+  const b = (s, sym, t) => `<button class="db db-${s} ${dec === s || (s === 'part' && dec === 'partial') ? 'on' : ''}" data-dec="${k}" data-s="${s}" title="${t}">${sym}</button>`;
+  return `<div class="decs">${b('ok', '✓', 'מאושר')}${b('no', '✗', 'לא מאושר – הסכום מתאפס')}${b('part', '≈', 'מאושר בתיקון – הקלד סכום מאושר')}</div>${auto ? '<small class="dec-lbl auto">אוטומטי</small>' : `<small class="dec-lbl">${dec ? DEC_LABEL[dec] : 'לבירור'}</small>`}`;
+}
+function aprCell(k, dec, apr, pmV, auto) {
+  if (dec === 'part') return cellInput(`approval.${k}.amt`, apr, { cls: 'apr-in', title: 'סכום מאושר ללא מע"מ' });
+  if (pmV == null && apr == null) return '';
+  const cut = pmV != null && apr != null ? pmV - apr : 0;
+  return `${fmtNum(apr)}${Math.abs(cut) > 0.5 ? `<small class="cut-amt">−${fmtNum(cut)}</small>` : ''}`;
+}
+function approvalBar(c) {
+  const a = c.approval, pct = a.total ? Math.round(a.decided / a.total * 100) : 0;
+  return `<div class="apr-bar">
+    <div class="apr-prog"><span>נבדקו <b>${a.decided}</b> מתוך <b>${a.total}</b> סעיפים${a.pending ? ` · <span class="warn-t">${a.pending} לבירור</span>` : a.total ? ' · <span class="ok-t">הבדיקה הושלמה</span>' : ''}</span><div class="pbar"><i style="width:${pct}%"></i></div></div>
+    <div class="apr-sum"><span>סה"כ מאושר ללא מע"מ</span><b>${fmtNum(c.apr.price)} ₪</b><small>${fmtNum(c.apr.priceVat)} ₪ כולל מע"מ</small></div>
+    <div class="apr-sum"><span>הפחתה מהאומדן</span><b class="${a.cut > 0.5 ? 'red-t' : ''}">${fmtNum(a.cut)} ₪</b><small>${a.cutPct ? fmtPct(a.cutPct) : '0%'} · ${fmtNum(a.cutVat)} ₪ כולל מע"מ</small></div>
+    <div class="apr-act"><button class="btn" id="aprGreen" title="מאשר את כל הסעיפים שבטווח המחירון (נקודה ירוקה) ושטרם הוחלט עליהם">✓ אשר את כל הסעיפים הירוקים</button>${a.any ? '<button class="btn ghost danger" id="aprClear">נקה החלטות</button>' : ''}</div>
+  </div>`;
+}
+function setDecision(p, v, k, s) {
+  const A = v.approval = v.approval || {};
+  const cur = A[k];
+  if (cur && cur.s === s) delete A[k];               // לחיצה חוזרת – ביטול ההחלטה (חזרה ל"לבירור")
+  else {
+    let amt = null;
+    if (s === 'part') {
+      const c0 = calcAll(p, v, Store.get().settings);
+      if (k[0] === 's') { const sr = c0.rows.flatMap(r => r.sources).find(x => 's' + x.idx === k); amt = sr ? srcTotal(sr) : null; }
+      else { const r = c0.rows.find(x => x.key === k); amt = r ? r.apr ?? r.pm : null; }
+      amt = amt != null ? Math.round(amt) : null;
+    }
+    A[k] = { s, amt };
+  }
+  autoStatus(p, v);
+}
+function autoStatus(p, v) {
+  const c = calcAll(p, v, Store.get().settings), a = c.approval;
+  if (!a.complete) return;
+  const st = a.cut > 0.5 || c.rows.some(r => r.dec === 'no' || r.dec === 'part' || r.dec === 'partial') ? 'אושר בהסתייגות' : 'אושר';
+  if (v.status !== st) { v.status = st; (v.statusLog = v.statusLog || []).push({ status: st, at: new Date().toISOString(), auto: true }); toast(`כל הסעיפים נבדקו – הסטטוס עודכן ל"${st}"`); }
+}
+
 function renderL2Tab(v, c, S) {
   if (v.level === 1) return renderL1Inputs(v, c, S);
   let n = 0;
   const vat = 1 + S.vat;
-  const sub = (k, label, cls = '') => `<tr class="subtotal ${cls}"><td></td><td>${label}</td><td></td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * vat)}</td><td class="num">${fmtPct(c.pm.price ? c.pm[k] / c.pm.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtPct(c.bench.price ? c.bench[k] / c.bench.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td><span class="dot ${statusOf(c.pm[k], c.bench[k], S)}"></span></td><td></td></tr>`;
+  const sub = (k, label, cls = '') => `<tr class="subtotal ${cls}"><td></td><td>${label}</td><td></td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.pm.vat && c.pm.vat[k] != null ? c.pm.vat[k] : c.pm[k] * vat)}</td><td class="num">${fmtPct(c.pm.price ? c.pm[k] / c.pm.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtPct(c.bench.price ? c.bench[k] / c.bench.price : null)}</td><td class="bsep"></td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td><span class="dot ${statusOf(c.pm[k], c.bench[k], S)}"></span></td><td class="bsep"></td><td></td><td class="num apr-cell ${c.apr[k] < c.pm[k] - 0.5 ? 'cut' : ''}">${fmtNum(c.apr[k])}</td><td></td></tr>`;
   let body = '', lastCh = null;
   c.rows.forEach(r => {
     const it = ITEM[r.key], x = v.items[r.key];
     if (r.hidden) { const s0 = SUBTOTAL_AFTER[r.key]; if (s0) { body += sub(s0[0], s0[1]); if (s0[2]) body += sub(s0[2][0], s0[2][1], 'major'); } return; }
-    if (r.ch !== lastCh) { body += `<tr class="chapter"><td colspan="15"><span class="chl">${CHAPTERS.find(ch => ch.id === r.ch).label}</span></td></tr>`; lastCh = r.ch; }
+    if (r.ch !== lastCh) { body += `<tr class="chapter"><td colspan="18"><span class="chl">${CHAPTERS.find(ch => ch.id === r.ch).label}</span></td></tr>`; lastCh = r.ch; }
     n++;
     let qtyCell = '', unitCell = '';
     if (it.kind === 'area') {
@@ -2470,7 +2623,7 @@ function renderL2Tab(v, c, S) {
     const computed = num(x.total) == null && r.pm != null;
     const benchUnit = (it.kind === 'pct' || ['govFees', 'otherFees'].includes(r.key)) ? fmtPct(r.benchUnit, 2) : (r.benchUnit != null ? fmtNum(r.benchUnit) : '');
     const multi = r.sources.length > 1, open = multi && state.expanded.has(r.key);
-    body += `<tr class="st-${r.status} ${multi ? 'has-src' : ''} ${open ? 'src-open' : ''}">
+    body += `<tr class="st-${r.status} ${multi ? 'has-src' : ''} ${open ? 'src-open' : ''} ${r.dec ? 'dec-' + r.dec : ''}">
       <td class="muted">${n}</td>
       <td class="desc">${multi ? `<button class="src-toggle ${open ? 'open' : ''}" data-src="${r.key}" title="${open ? 'סגירת הפירוט' : 'הצג את השורות שמהן הגיע הסכום'}">${open ? '−' : '+'} פירוט (${r.sources.length})</button>` : ''}${esc(r.label)}${it.noVat ? ' <span class="tag">ללא מע"מ</span>' : ''}${ADD_KEYS.includes(r.key) && r.pm ? `<label class="inbasic" title="תוספת נכללת בעלות המ&quot;ר הבסיסי אלא אם הוגדרה בנפרד"><input type="checkbox" data-path="inBasic.${r.key}" ${inBasicOf(v, r.key) ? 'checked' : ''}> נכלל במ"ר בסיסי</label>` : ''}</td>
       <td class="num">${qtyCell}</td>
@@ -2485,23 +2638,27 @@ function renderL2Tab(v, c, S) {
       <td class="num ${r.status === 'red' ? 'red-t' : ''}">${r.status === 'same' ? '' : fmtNum(r.diff)}</td>
       <td class="num ${r.status === 'red' ? 'red-t' : ''}">${r.status === 'same' ? '' : (r.diffPct != null ? (r.diffPct > 0 ? '+' : '') + fmtPct(r.diffPct) : '')}</td>
       <td><span class="dot ${r.status}" title="${ST_LABEL[r.status]}"></span></td>
-      <td><input class="cell note" data-path="reviewNotes.${r.key}" value="${esc((v.reviewNotes || {})[r.key] || '')}" placeholder="${esc(x.note || 'הערת בודק')}" title="${esc(x.note ? 'הערת מנהל הפרויקט: ' + x.note : '')}"></td>
+      <td class="bsep"></td>
+      <td class="dec-cell">${r.needs ? decButtons(r.key, r.dec, r.auto && !r.dec) : ''}</td>
+      <td class="num apr-cell ${r.apr != null && r.pm != null && r.apr < r.pm - 0.5 ? 'cut' : ''}">${aprCell(r.key, r.dec, r.apr, r.pm, r.auto)}</td>
+      <td><input class="cell note" data-path="reviewNotes.${r.key}" value="${esc((v.reviewNotes || {})[r.key] || '')}" placeholder="${esc(x.note || (r.dec === 'no' || r.dec === 'part' ? 'נימוק להחלטה' : 'הערת בודק'))}" title="${esc(x.note ? 'הערת מנהל הפרויקט: ' + x.note : '')}"></td>
     </tr>`;
     if (open) r.sources.forEach(sr => {
       const bad = arithBad(sr.qty, sr.price, sr.total);
-      body += `<tr class="src-row"><td></td><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${sr.pct != null && sr.qty == null ? fmtPct(sr.pct) : fmtNum(sr.price)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}${bad ? ' ⚠' : ''}</td><td class="num">${sr.total != null ? fmtNum(sr.total * vat) : ''}</td><td class="num">${c.pm.price && sr.total != null ? fmtPct(sr.total / c.pm.price) : ''}</td><td class="bsep"></td><td colspan="2" class="small muted">שורה ${esc(sr.src)} במקור</td><td class="bsep"></td><td colspan="4"></td></tr>`;
+      body += `<tr class="src-row"><td></td><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${sr.pct != null && sr.qty == null ? fmtPct(sr.pct) : fmtNum(sr.price)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}${bad ? ' ⚠' : ''}</td><td class="num">${sr.total != null ? fmtNum(sr.total * vat) : ''}</td><td class="num">${c.pm.price && sr.total != null ? fmtPct(sr.total / c.pm.price) : ''}</td><td class="bsep"></td><td colspan="2" class="small muted">שורה ${esc(sr.src)} במקור</td><td class="bsep"></td><td colspan="3"></td><td class="bsep"></td><td class="dec-cell">${decButtons('s' + sr.idx, sr.dec)}</td><td class="num apr-cell ${sr.apr < z(srcTotal(sr)) - 0.5 ? 'cut' : ''}">${aprCell('s' + sr.idx, sr.dec, sr.apr, srcTotal(sr))}</td><td><input class="cell note" data-path="reviewNotes.s${sr.idx}" value="${esc((v.reviewNotes || {})['s' + sr.idx] || '')}" placeholder="${sr.dec === 'no' || sr.dec === 'part' ? 'נימוק להחלטה' : ''}"></td></tr>`;
     });
     const s = SUBTOTAL_AFTER[r.key];
     if (s) { body += sub(s[0], s[1]); if (s[2]) body += sub(s[2][0], s[2][1], 'major'); }
   });
   body += sub('price', 'סה"כ פרויקט (PRICE)', 'major grand');
   return `${areasBlock(v, c)}
+    ${approvalBar(c)}
     <div class="table-wrap"><table class="grid l2">
       <thead>
-        <tr class="grp"><th colspan="7">אומדן מנהל הפרויקט</th><th class="bsep"></th><th colspan="2">מחירון (${esc(S.priceIndex)})</th><th class="bsep"></th><th colspan="3">השוואה</th><th></th></tr>
-        <tr><th>#</th><th>פירוט</th><th class="num">כמות</th><th class="num">מחיר ליח' / %</th><th class="num">סה"כ ללא מע"מ</th><th class="num">כולל מע"מ</th><th class="num">% מה-PRICE</th><th class="bsep"></th><th class="num">סה"כ מחירון</th><th class="num">%</th><th class="bsep"></th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th><th>הערות</th></tr>
+        <tr class="grp"><th colspan="7">אומדן מנהל הפרויקט</th><th class="bsep"></th><th colspan="2">מחירון (${esc(S.priceIndex)})</th><th class="bsep"></th><th colspan="3">השוואה</th><th class="bsep"></th><th colspan="3" class="grp-dec">החלטת בודק</th></tr>
+        <tr><th>#</th><th>פירוט</th><th class="num">כמות</th><th class="num">מחיר ליח' / %</th><th class="num">סה"כ ללא מע"מ</th><th class="num">כולל מע"מ</th><th class="num">% מה-PRICE</th><th class="bsep"></th><th class="num">סה"כ מחירון</th><th class="num">%</th><th class="bsep"></th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th><th class="bsep"></th><th>החלטה</th><th class="num">סכום מאושר ללא מע"מ</th><th>נימוק / הערות</th></tr>
       </thead><tbody>${body}</tbody></table></div>
-    <p class="legend muted small"><span class="dot ok"></span> ללא חריגה <span class="dot warn"></span> חריגה עד ${fmtPct(S.yellowPct)} <span class="dot red"></span> חריגה מעל ${fmtPct(S.yellowPct)} <span class="dot same"></span> סעיף קומפלט – מחירון = אומדן (אפשר להזין ערך מחירון ידנית) · <span class="changed-sample">ערך מסומן</span> = שונה מהמקור של מנהל הפרויקט · שדה אפור = מחושב אוטומטית</p>`;
+    <p class="legend muted small"><span class="dot ok"></span> ללא חריגה <span class="dot warn"></span> חריגה עד ${fmtPct(S.yellowPct)} <span class="dot red"></span> חריגה מעל ${fmtPct(S.yellowPct)} <span class="dot same"></span> סעיף קומפלט – מחירון = אומדן (אפשר להזין ערך מחירון ידנית) · <span class="changed-sample">ערך מסומן</span> = שונה מהמקור של מנהל הפרויקט · שדה אפור = מחושב אוטומטית<br>החלטה: ✓ מאושר · ✗ לא מאושר (הסכום מתאפס) · ≈ מאושר בתיקון (מקלידים את הסכום המאושר) · ללא בחירה = לבירור. סעיפים באחוזים (מחשוב, תכנון, עמלה, בנ"מ) מחושבים אוטומטית לפי הבסיס המאושר.</p>`;
 }
 
 function renderL1Inputs(v, c, S) {
@@ -2628,6 +2785,14 @@ function bindTab(p, v) {
       const y = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y);
     });
   });
+  const rerender = () => { Store.save(p.id); const y = window.scrollY; renderProject(p, v.id); window.scrollTo(0, y); };
+  $$('#tabBody [data-dec]').forEach(b => b.onclick = () => { setDecision(p, v, b.dataset.dec, b.dataset.s); rerender(); });
+  if ($('#aprGreen')) $('#aprGreen').onclick = () => {
+    const c = calcAll(p, v, Store.get().settings); const A = v.approval = v.approval || {}; let n = 0;
+    c.rows.forEach(r => { if (r.needs && !r.auto && !r.dec && r.status === 'ok') { A[r.key] = { s: 'ok', amt: null }; n++; } });
+    autoStatus(p, v); toast(n ? `אושרו ${n} סעיפים ירוקים` : 'אין סעיפים ירוקים שממתינים להחלטה'); rerender();
+  };
+  if ($('#aprClear')) $('#aprClear').onclick = () => { if (confirm('לנקות את כל ההחלטות בגרסה זו? (הנימוקים נשמרים)')) { v.approval = {}; rerender(); } };
   const cs = $('#cmpSel'); if (cs) cs.onchange = e => { state.compareA = e.target.value; renderProject(p, v.id); };
 }
 
@@ -2694,6 +2859,20 @@ function renderSettings() {
 }
 
 /* ---------- דוח להדפסה ---------- */
+/* רשימת סעיפים שלא אושרו / אושרו בתיקון – לדוח ולמכתב למנהל הפרויקט */
+function rejectedList(v, c) {
+  const out = [], notes = v.reviewNotes || {};
+  c.rows.forEach(r => {
+    if (r.hidden || r.pm == null) return;
+    if (r.dec === 'no' || r.dec === 'part') out.push({ label: r.label, pm: r.pm, apr: r.apr, dec: DEC_LABEL[r.dec], note: notes[r.key] });
+    else if (r.dec === 'partial') {
+      out.push({ label: r.label, pm: r.pm, apr: r.pm - r.red, dec: DEC_LABEL.partial, note: notes[r.key] });
+      r.sources.forEach(sr => { if (sr.dec === 'no' || sr.dec === 'part') out.push({ sub: true, label: sr.desc, pm: srcTotal(sr), apr: sr.apr, dec: DEC_LABEL[sr.dec], note: notes['s' + sr.idx] }); });
+    }
+  });
+  return out;
+}
+
 function renderPrint(p, vid) {
   const S = Store.get().settings, v = curVersion(p, vid);
   if (!v) { location.hash = '#/p/' + p.id; return; }
@@ -2717,12 +2896,14 @@ function renderPrint(p, vid) {
       <div><span>מ"ר בסיסי נגזר ללא מע"מ (אומדן / מחירון)</span><b>${c.l1.unitBasic != null ? fmtNum(c.l1.unitBasic) : '—'} / ${fmtNum(c.P.basic)} ₪</b></div>
       <div><span>שטח בניה / משוקלל / פיתוח</span><b>${fmtNum(c.summary.area)} / ${fmtNum(c.l1.weighted)} / ${fmtNum(c.summary.devA)} מ"ר</b></div>
     </section>
+    ${c.approval.any ? `<section class="r-kpis r-apr"><div><span>סה"כ מאושר ללא מע"מ</span><b>${fmtNum(c.apr.price)} ₪</b></div><div><span>סה"כ מאושר כולל מע"מ</span><b>${fmtNum(c.apr.priceVat)} ₪</b></div><div><span>הפחתה מהאומדן (ללא מע"מ)</span><b class="${c.approval.cut > 0.5 ? 'red-t' : ''}">${fmtNum(c.approval.cut)} ₪ (${fmtPct(c.approval.cutPct || 0)})</b></div><div><span>עלות מאושרת למ"ר${c.summary.permit ? ' לפי היתר' : ''} ללא מע"מ</span><b>${fmtNum(c.approval.sqm)} ₪</b></div><div><span>סעיפים שנבדקו</span><b>${c.approval.decided} / ${c.approval.total}</b></div></section>` : ''}
     ${v.generalNotes ? `<section><h3>סיכום הבדיקה</h3><p class="pre">${esc(v.generalNotes)}</p></section>` : ''}
     <section><h3>ממצאים (${reds.length} חריגות, ${warns.length} הערות)</h3><ul class="checks">${c.checks.map(x => `<li class="${x.level}"><span class="dot ${x.level}"></span><div>${x.item ? `<b>${esc(ITEM[x.item]?.label || '')}</b> – ` : ''}${esc(x.text)}</div></li>`).join('') || '<li>לא נמצאו חריגות</li>'}</ul></section>
+    ${(() => { const L = rejectedList(v, c); return L.length ? `<section class="r-table"><h3>סעיפים שלא אושרו / אושרו בתיקון</h3><table class="grid"><thead><tr><th>סעיף</th><th class="num">אומדן ₪</th><th class="num">מאושר ₪</th><th class="num">הפחתה ₪</th><th>החלטה</th><th>נימוק</th></tr></thead><tbody>${L.map(x => `<tr class="${x.sub ? 'src-row' : ''}"><td class="${x.sub ? 'desc' : ''}">${esc(x.label)}</td><td class="num">${fmtNum(x.pm)}</td><td class="num">${fmtNum(x.apr)}</td><td class="num red-t">${fmtNum(x.pm - x.apr)}</td><td>${esc(x.dec)}</td><td class="small">${esc(x.note || '')}</td></tr>`).join('')}<tr class="subtotal"><td>סה"כ הפחתה (כולל השפעה על סעיפים באחוזים)</td><td class="num">${fmtNum(c.pm.price)}</td><td class="num">${fmtNum(c.apr.price)}</td><td class="num red-t">${fmtNum(c.approval.cut)}</td><td></td><td></td></tr></tbody></table></section>` : ''; })()}
     <section class="r-table"><h3>השוואה למחירון</h3>
-      <table class="grid"><thead><tr><th>סעיף</th><th class="num">כמות</th><th class="num">אומדן ₪</th><th class="num">מחירון ₪</th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th><th>הערות</th></tr></thead><tbody>
-      ${(() => { let out = '', last = null; c.rows.forEach(r => { if (r.hidden || (!r.pm && !r.bench)) return; if (r.ch !== last) { out += `<tr class="chapter"><td colspan="8">${CHAPTERS.find(x => x.id === r.ch).label}</td></tr>`; last = r.ch; } out += `<tr><td>${esc(r.label)}</td><td class="num">${fmtNum(r.qty)}</td><td class="num">${fmtNum(r.pm)}</td><td class="num">${fmtNum(r.bench)}</td><td class="num">${r.status === 'same' ? '' : fmtNum(r.diff)}</td><td class="num">${r.status === 'same' || r.diffPct == null ? '' : (r.diffPct > 0 ? '+' : '') + fmtPct(r.diffPct)}</td><td><span class="dot ${r.status}"></span></td><td class="small">${esc((v.reviewNotes || {})[r.key] || '')}</td></tr>`; if (r.sources.length > 1) r.sources.forEach(sr => { out += `<tr class="src-row"><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${fmtNum(sr.total ?? (sr.qty != null && sr.price != null ? sr.qty * sr.price : null))}</td><td></td><td></td><td></td><td></td><td class="small">שורה ${esc(sr.src)} במקור</td></tr>`; }); }); return out; })()}
-      ${[['direct', 'סה"כ עלויות ישירות (COST)'], ['overhead', 'סה"כ תקורות'], ['bnm', 'בנ"מ'], ['price', 'סה"כ פרויקט (PRICE) ללא מע"מ']].map(([k, l]) => `<tr class="subtotal"><td>${l}</td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td></td><td></td></tr>`).join('')}
+      <table class="grid"><thead><tr><th>סעיף</th><th class="num">כמות</th><th class="num">אומדן ₪</th><th class="num">מחירון ₪</th><th class="num">הפרש ₪</th><th class="num">הפרש %</th><th></th><th>החלטה</th><th class="num">מאושר ₪</th><th>הערות</th></tr></thead><tbody>
+      ${(() => { let out = '', last = null; c.rows.forEach(r => { if (r.hidden || (!r.pm && !r.bench)) return; if (r.ch !== last) { out += `<tr class="chapter"><td colspan="10">${CHAPTERS.find(x => x.id === r.ch).label}</td></tr>`; last = r.ch; } out += `<tr><td>${esc(r.label)}</td><td class="num">${fmtNum(r.qty)}</td><td class="num">${fmtNum(r.pm)}</td><td class="num">${fmtNum(r.bench)}</td><td class="num">${r.status === 'same' ? '' : fmtNum(r.diff)}</td><td class="num">${r.status === 'same' || r.diffPct == null ? '' : (r.diffPct > 0 ? '+' : '') + fmtPct(r.diffPct)}</td><td><span class="dot ${r.status}"></span></td><td class="small">${r.dec ? DEC_LABEL[r.dec] : r.auto ? 'אוטומטי' : 'לבירור'}</td><td class="num ${r.apr < z(r.pm) - 0.5 ? 'red-t' : ''}">${fmtNum(r.apr)}</td><td class="small">${esc((v.reviewNotes || {})[r.key] || '')}</td></tr>`; if (r.sources.length > 1) r.sources.forEach(sr => { out += `<tr class="src-row"><td class="desc">${esc(sr.desc)}</td><td class="num">${fmtNum(sr.qty)}</td><td class="num">${fmtNum(srcTotal(sr))}</td><td></td><td></td><td></td><td></td><td class="small">${sr.dec ? DEC_LABEL[sr.dec] : ''}</td><td class="num">${fmtNum(sr.apr)}</td><td class="small">${esc((v.reviewNotes || {})['s' + sr.idx] || ('שורה ' + sr.src + ' במקור'))}</td></tr>`; }); }); return out; })()}
+      ${[['direct', 'סה"כ עלויות ישירות (COST)'], ['overhead', 'סה"כ תקורות'], ['bnm', 'בנ"מ'], ['price', 'סה"כ פרויקט (PRICE) ללא מע"מ']].map(([k, l]) => `<tr class="subtotal"><td>${l}</td><td></td><td class="num">${fmtNum(c.pm[k])}</td><td class="num">${fmtNum(c.bench[k])}</td><td class="num">${fmtNum(c.pm[k] - c.bench[k])}</td><td class="num">${c.bench[k] ? fmtPct((c.pm[k] - c.bench[k]) / c.bench[k]) : ''}</td><td></td><td></td><td class="num">${fmtNum(c.apr[k])}</td><td></td></tr>`).join('')}
       </tbody></table></section>
     <section class="r-table"><h3>ריכוז עלות למ"ר (ללא מע"מ)</h3>
       ${c.summary.pm ? `<table class="grid"><thead><tr><th></th><th class="num">אומדן PRICE</th><th class="num">אומדן COST</th><th class="num">מחירון PRICE</th><th class="num">מחירון COST</th></tr></thead><tbody>
